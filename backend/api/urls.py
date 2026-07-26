@@ -1,11 +1,17 @@
 from django.urls import path
 
+from api.auth import LoginView, LogoutView, SessionView
 from api.views.collectables import (
     CollectablesStateView,
     CombineView,
     HarmonyMergeView,
     MergeUpView,
     SellView,
+)
+from api.views.friends import (
+    FriendLinkListCreateView,
+    PublicFriendCheckView,
+    TrialSessionView,
 )
 from api.views.health import HealthView
 from api.views.rewards import ReceptacleListView, RewardCreateView
@@ -43,4 +49,10 @@ urlpatterns = [
         name="treasure-discard",
     ),
     path("state", StateView.as_view(), name="state"),
+    path("auth/login", LoginView.as_view(), name="auth-login"),
+    path("auth/logout", LogoutView.as_view(), name="auth-logout"),
+    path("auth/session", SessionView.as_view(), name="auth-session"),
+    path("friends", FriendLinkListCreateView.as_view(), name="friends"),
+    path("public/friend/<str:name>", PublicFriendCheckView.as_view(), name="public-friend"),
+    path("trial/session", TrialSessionView.as_view(), name="trial-session"),
 ]

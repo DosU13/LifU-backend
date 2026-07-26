@@ -1,13 +1,17 @@
 import pytest
+from rest_framework.test import APIClient
 
 from providers.fallback import FallbackContentProvider
 from services import container
+from services.trial import get_trial_store
+
+OWNER_PASSWORD = "test-owner-password"
 
 
 def _clear(cached_fn) -> None:
-    # Tests may monkeypatch get_ai_client with a plain lambda (no cache_clear);
-    # monkeypatch's own teardown can run either before or after this fixture's,
-    # so tolerate whichever function object is currently in place.
+    # Tests may monkeypatch a container factory with a plain lambda (no
+    # cache_clear); monkeypatch's teardown can run either before or after this
+    # fixture's, so tolerate whichever function object is currently in place.
     clear = getattr(cached_fn, "cache_clear", None)
     if clear is not None:
         clear()
@@ -18,11 +22,14 @@ def _clear_all() -> None:
     _clear(container.get_ai_client)
     _clear(container.get_rng)
     _clear(container.get_content_provider)
+    get_trial_store().clear()
 
 
 @pytest.fixture(autouse=True)
-def _reset_container_caches():
-    """Container singletons must not leak between tests."""
+def _reset_state(settings):
+    """No game state, trial session, or cached collaborator leaks between tests."""
+    settings.OWNER_PASSWORD = OWNER_PASSWORD
+    settings.REPO_BACKEND = "memory"
     _clear_all()
     yield
     _clear_all()
@@ -40,3 +47,19 @@ def _no_live_content(monkeypatch):
         "get_content_provider",
         lambda: FallbackContentProvider(rng=container.get_rng()),
     )
+
+
+@pytest.fixture
+def anon_client() -> APIClient:
+    """No session, no trial token — should be refused by every game endpoint."""
+    return APIClient()
+
+
+@pytest.fixture
+def client(anon_client) -> APIClient:
+    """Signed in as the owner."""
+    response = anon_client.post(
+        "/api/auth/login", {"password": OWNER_PASSWORD}, format="json"
+    )
+    assert response.status_code == 200, response.content
+    return anon_client

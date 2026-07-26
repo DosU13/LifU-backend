@@ -366,9 +366,14 @@ Errors: consistent `{"error": {"code": str, "message": str}}`; domain errors →
 
 Trial: `POST /api/trial/session {friend_name}` → `{token}` (name must be a valid FriendLink; memory RepoBundle seeded with a starter state: 100 coins, 5 of each base fragment, 6 pool receptacles). Every game endpoint below accepts **either** the owner session **or** header `X-Trial-Token`; the container picks (firebase repos + GroqClient) or (memory repos + RandomAIClient) accordingly. Same views, same services — the abstraction does the work.
 
+**How a request finds its world.** `GamePermission` (`api/permissions.py`) calls `container.context_for(request)`, which returns the owner's `GameContext` for a valid session, a trial session's context for a known `X-Trial-Token`, or `None`. `None` raises `NotAuthenticated` → 401 (`api/authentication.py` exists only to supply the `WWW-Authenticate` header DRF needs to keep that a 401 rather than a 403). The resolved context is stashed on `request.game_context`, and views build services from it — no view ever reaches for a global. Trial contexts are held in a process-local `TrialStore` with a 24 h TTL, so nothing a friend does can touch the owner's repositories or spend the owner's Groq quota.
+
+**No relational database.** `DATABASES = {}` and the owner session is a signed cookie: game state lives entirely behind the repositories, so there is nothing to migrate.
+
 | Method + path | Body → Response (happy path) |
 |---|---|
-| POST `/api/auth/login` | `{password}` → `{ok}` (sets session; password from env `OWNER_PASSWORD`) |
+| POST `/api/auth/login` | `{password}` → `{ok}` (sets a signed-cookie session; password from env `OWNER_PASSWORD`, compared in constant time; an unset password locks the game rather than opening it) |
+| GET `/api/auth/session` | no auth → `{authenticated, is_trial}` so the SPA can tell which mode it is in |
 | POST `/api/auth/logout` | → `{ok}` |
 | GET `/api/state` | → full snapshot: wallet, collectables, treasures (with prices+pity), dropped receptacles, stats — one call boots the SPA |
 | POST `/api/tasks` | `{text}` → `{task:{value, virtues}, fragments_awarded}` |

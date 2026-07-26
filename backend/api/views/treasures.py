@@ -7,12 +7,6 @@ from rest_framework.views import APIView
 from api.serializers import serialize_receptacle, serialize_stocks
 from core.enums import ReceptacleState
 from core.errors import DiscardAlreadyUsed, DomainError, InsufficientCoins, MissingKey, NotFound
-from services.container import (
-    get_repos,
-    get_reward_service,
-    get_stats_service,
-    get_treasure_service,
-)
 
 
 def _error(exc: DomainError, status_code: int) -> Response:
@@ -44,7 +38,7 @@ def _serialize_treasure(service, treasure) -> dict:
 class TreasureListView(APIView):
     @extend_schema(responses={200: dict})
     def get(self, request: Request) -> Response:
-        service = get_treasure_service()
+        service = request.game_context.treasure_service()
         treasures = service.get_all()
         return Response({"treasures": [_serialize_treasure(service, t) for t in treasures]})
 
@@ -52,7 +46,7 @@ class TreasureListView(APIView):
 class TreasureBuyView(APIView):
     @extend_schema(request=None, responses={200: dict})
     def post(self, request: Request, treasure_id: str) -> Response:
-        service = get_treasure_service()
+        service = request.game_context.treasure_service()
         try:
             result = service.buy(treasure_id)
         except NotFound as exc:
@@ -76,7 +70,7 @@ class TreasureBuyView(APIView):
 class TreasureDiscardView(APIView):
     @extend_schema(request=None, responses={200: dict})
     def post(self, request: Request, treasure_id: str) -> Response:
-        service = get_treasure_service()
+        service = request.game_context.treasure_service()
         try:
             new_treasure = service.discard(treasure_id)
         except NotFound as exc:
@@ -92,7 +86,8 @@ class ReceptacleOpenView(APIView):
     @extend_schema(request=None, responses={200: dict})
     def post(self, request: Request, receptacle_id: str) -> Response:
         try:
-            receptacle, coins_gained, coins = get_reward_service().open_receptacle(receptacle_id)
+            reward_service = request.game_context.reward_service()
+            receptacle, coins_gained, coins = reward_service.open_receptacle(receptacle_id)
         except NotFound as exc:
             return _error(exc, status.HTTP_404_NOT_FOUND)
         except MissingKey as exc:
@@ -126,10 +121,11 @@ class StateView(APIView):
 
     @extend_schema(responses={200: dict})
     def get(self, request: Request) -> Response:
-        repos = get_repos()
-        treasure_service = get_treasure_service()
+        repos = request.game_context.repos
+        treasure_service = request.game_context.treasure_service()
+        reward_service = request.game_context.reward_service()
         treasures = treasure_service.get_all()
-        stats = get_stats_service().get_stats()
+        stats = request.game_context.stats_service().get_stats()
 
         return Response(
             {
@@ -138,7 +134,7 @@ class StateView(APIView):
                 "treasures": [_serialize_treasure(treasure_service, t) for t in treasures],
                 "dropped_receptacles": [
                     serialize_receptacle(r)
-                    for r in get_reward_service().list_by_state(ReceptacleState.DROPPED)
+                    for r in reward_service.list_by_state(ReceptacleState.DROPPED)
                 ],
                 "stats": {
                     "per_day": stats.per_day,

@@ -1,7 +1,6 @@
 import json
 
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 from core.entities import Receptacle
 from core.enums import (
@@ -40,17 +39,15 @@ def _seed_pool(count: int, rarity=ReceptacleRarity.CHEST, value=20, is_secret=Fa
     return created
 
 
-def test_get_treasures_empty_pool_returns_no_treasures():
-    client = APIClient()
+def test_get_treasures_empty_pool_returns_no_treasures(client):
     response = client.get(reverse("treasures"))
 
     assert response.status_code == 200
     assert response.json()["treasures"] == []
 
 
-def test_get_treasures_generates_three_slots():
+def test_get_treasures_generates_three_slots(client):
     _seed_pool(30)
-    client = APIClient()
 
     response = client.get(reverse("treasures"))
 
@@ -62,9 +59,8 @@ def test_get_treasures_generates_three_slots():
         assert 5 <= len(treasure["contents"]) <= 10
 
 
-def test_treasure_contents_never_expose_value_or_reward_text():
+def test_treasure_contents_never_expose_value_or_reward_text(client):
     _seed_pool(10, is_secret=True)
-    client = APIClient()
 
     response = client.get(reverse("treasures"))
 
@@ -77,9 +73,8 @@ def test_treasure_contents_never_expose_value_or_reward_text():
             assert set(item) == {"virtue", "rarity", "is_secret", "friend_name"}
 
 
-def test_buy_without_coins_returns_400():
+def test_buy_without_coins_returns_400(client):
     _seed_pool(10)
-    client = APIClient()
     treasure_id = client.get(reverse("treasures")).json()["treasures"][0]["id"]
 
     response = client.post(reverse("treasure-buy", args=[treasure_id]))
@@ -88,10 +83,9 @@ def test_buy_without_coins_returns_400():
     assert response.json()["error"]["code"] == "INSUFFICIENT_COINS"
 
 
-def test_buy_happy_path(monkeypatch):
+def test_buy_happy_path(client, monkeypatch):
     _seed_pool(10)
     container.get_repos().wallet.adjust(1000)
-    client = APIClient()
     treasure_id = client.get(reverse("treasures")).json()["treasures"][0]["id"]
 
     response = client.post(reverse("treasure-buy", args=[treasure_id]))
@@ -105,15 +99,13 @@ def test_buy_happy_path(monkeypatch):
     assert set(body["pity"]) == {"VAULT", "SANCTUM"}
 
 
-def test_buy_unknown_treasure_returns_404():
-    client = APIClient()
+def test_buy_unknown_treasure_returns_404(client):
     response = client.post(reverse("treasure-buy", args=["nope"]))
     assert response.status_code == 404
 
 
-def test_discard_returns_new_treasure_then_blocks_second_attempt():
+def test_discard_returns_new_treasure_then_blocks_second_attempt(client):
     _seed_pool(30)
-    client = APIClient()
     treasures = client.get(reverse("treasures")).json()["treasures"]
 
     first = client.post(reverse("treasure-discard", args=[treasures[0]["id"]]))
@@ -137,9 +129,8 @@ def _drop_one() -> str:
     return receptacle.id
 
 
-def test_open_without_key_returns_missing_key_with_requirement():
+def test_open_without_key_returns_missing_key_with_requirement(client):
     _seed_pool(1)
-    client = APIClient()
     receptacle_id = _drop_one()
 
     response = client.post(reverse("receptacle-open", args=[receptacle_id]))
@@ -151,10 +142,9 @@ def test_open_without_key_returns_missing_key_with_requirement():
     assert error["key_needed"] == {"element": "OCEAN", "rarity": "CRYSTAL"}
 
 
-def test_open_with_key_consumes_it_and_pays_coins():
+def test_open_with_key_consumes_it_and_pays_coins(client):
     _seed_pool(1, value=42)
     container.get_repos().collectables.adjust({(Element.OCEAN, CollectableRarity.CRYSTAL): 1})
-    client = APIClient()
     receptacle_id = _drop_one()
 
     response = client.post(reverse("receptacle-open", args=[receptacle_id]))
@@ -168,10 +158,9 @@ def test_open_with_key_consumes_it_and_pays_coins():
     assert stocks[(Element.OCEAN, CollectableRarity.CRYSTAL)] == 0
 
 
-def test_open_reveals_secret_reward_text():
+def test_open_reveals_secret_reward_text(client):
     _seed_pool(1, is_secret=True)
     container.get_repos().collectables.adjust({(Element.OCEAN, CollectableRarity.CRYSTAL): 1})
-    client = APIClient()
     receptacle_id = _drop_one()
 
     response = client.post(reverse("receptacle-open", args=[receptacle_id]))
@@ -179,18 +168,16 @@ def test_open_reveals_secret_reward_text():
     assert response.json()["receptacle"]["reward_text"] == "secret text"
 
 
-def test_open_receptacle_not_dropped_returns_400():
+def test_open_receptacle_not_dropped_returns_400(client):
     created = _seed_pool(1)[0]
     container.get_repos().collectables.adjust({(Element.OCEAN, CollectableRarity.CRYSTAL): 1})
-    client = APIClient()
 
     response = client.post(reverse("receptacle-open", args=[created.id]))
 
     assert response.status_code == 400
 
 
-def test_open_unknown_receptacle_returns_404():
-    client = APIClient()
+def test_open_unknown_receptacle_returns_404(client):
     response = client.post(reverse("receptacle-open", args=["nope"]))
     assert response.status_code == 404
 
@@ -198,10 +185,9 @@ def test_open_unknown_receptacle_returns_404():
 # --- state snapshot ---
 
 
-def test_state_returns_full_snapshot():
+def test_state_returns_full_snapshot(client):
     _seed_pool(10)
     container.get_repos().wallet.adjust(250)
-    client = APIClient()
 
     response = client.get(reverse("state"))
 
@@ -214,9 +200,8 @@ def test_state_returns_full_snapshot():
     assert set(body["stats"]) == {"per_day", "virtue_means", "streak"}
 
 
-def test_state_never_leaks_secret_text():
+def test_state_never_leaks_secret_text(client):
     _seed_pool(10, is_secret=True)
-    client = APIClient()
 
     response = client.get(reverse("state"))
 

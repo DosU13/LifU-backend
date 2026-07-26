@@ -13,7 +13,6 @@ from api.serializers import (
     serialize_stocks,
 )
 from core.errors import DomainError, InsufficientCollectables, InvalidMerge
-from services.container import get_economy_service, get_merger_service, get_repos
 
 
 def _domain_error_response(exc: DomainError, status_code: int) -> Response:
@@ -23,7 +22,7 @@ def _domain_error_response(exc: DomainError, status_code: int) -> Response:
 class CollectablesStateView(APIView):
     @extend_schema(responses={200: CollectablesStateResponseSerializer})
     def get(self, request: Request) -> Response:
-        repos = get_repos()
+        repos = request.game_context.repos
         return Response(
             {
                 "stocks": serialize_stocks(repos.collectables.get_all()),
@@ -41,11 +40,11 @@ class MergeUpView(APIView):
         rarity = serializer.validated_data["rarity"]
 
         try:
-            get_merger_service().merge_up(element, rarity)
+            request.game_context.merger_service().merge_up(element, rarity)
         except (InvalidMerge, InsufficientCollectables) as exc:
             return _domain_error_response(exc, status.HTTP_400_BAD_REQUEST)
 
-        stocks = serialize_stocks(get_repos().collectables.get_all())
+        stocks = serialize_stocks(request.game_context.repos.collectables.get_all())
         return Response({"stocks": stocks})
 
 
@@ -57,11 +56,11 @@ class HarmonyMergeView(APIView):
         rarity = serializer.validated_data["rarity"]
 
         try:
-            result = get_merger_service().merge_harmony(rarity)
+            result = request.game_context.merger_service().merge_harmony(rarity)
         except InsufficientCollectables as exc:
             return _domain_error_response(exc, status.HTTP_400_BAD_REQUEST)
 
-        stocks = serialize_stocks(get_repos().collectables.get_all())
+        stocks = serialize_stocks(request.game_context.repos.collectables.get_all())
         return Response({"yield": result.harmony_yield, "extras": result.extras, "stocks": stocks})
 
 
@@ -75,11 +74,12 @@ class CombineView(APIView):
         rarity = serializer.validated_data["rarity"]
 
         try:
-            result_element = get_merger_service().combine(element_a, element_b, rarity)
+            merger = request.game_context.merger_service()
+            result_element = merger.combine(element_a, element_b, rarity)
         except (InvalidMerge, InsufficientCollectables) as exc:
             return _domain_error_response(exc, status.HTTP_400_BAD_REQUEST)
 
-        stocks = serialize_stocks(get_repos().collectables.get_all())
+        stocks = serialize_stocks(request.game_context.repos.collectables.get_all())
         return Response({"result_element": result_element.value, "stocks": stocks})
 
 
@@ -93,9 +93,9 @@ class SellView(APIView):
         count = serializer.validated_data["count"]
 
         try:
-            coins = get_economy_service().sell(element, rarity, count)
+            coins = request.game_context.economy_service().sell(element, rarity, count)
         except InsufficientCollectables as exc:
             return _domain_error_response(exc, status.HTTP_400_BAD_REQUEST)
 
-        stocks = serialize_stocks(get_repos().collectables.get_all())
+        stocks = serialize_stocks(request.game_context.repos.collectables.get_all())
         return Response({"coins": coins, "stocks": stocks})

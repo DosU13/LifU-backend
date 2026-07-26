@@ -1,5 +1,4 @@
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 from aiclients.fake import FakeAIClient
 from services import container
@@ -24,9 +23,8 @@ def _use_fake_ai(monkeypatch, responses):
     return fake
 
 
-def test_post_task_happy_path(monkeypatch):
+def test_post_task_happy_path(client, monkeypatch):
     _use_fake_ai(monkeypatch, [_valid_task_response()])
-    client = APIClient()
 
     response = client.post(reverse("tasks"), {"text": "went for a run"}, format="json")
 
@@ -38,18 +36,16 @@ def test_post_task_happy_path(monkeypatch):
     assert isinstance(body["fragments_awarded"], dict)
 
 
-def test_post_task_missing_text_is_rejected(monkeypatch):
+def test_post_task_missing_text_is_rejected(client, monkeypatch):
     _use_fake_ai(monkeypatch, [])
-    client = APIClient()
 
     response = client.post(reverse("tasks"), {}, format="json")
 
     assert response.status_code == 400
 
 
-def test_post_task_ai_failure_returns_502(monkeypatch):
+def test_post_task_ai_failure_returns_502(client, monkeypatch):
     _use_fake_ai(monkeypatch, [{"bad": 1}, {"bad": 1}, {"bad": 1}])
-    client = APIClient()
 
     response = client.post(reverse("tasks"), {"text": "text"}, format="json")
 
@@ -57,9 +53,8 @@ def test_post_task_ai_failure_returns_502(monkeypatch):
     assert response.json()["error"]["code"] == "AI_INVALID"
 
 
-def test_get_tasks_lists_completed_tasks(monkeypatch):
+def test_get_tasks_lists_completed_tasks(client, monkeypatch):
     _use_fake_ai(monkeypatch, [_valid_task_response(Value=5)])
-    client = APIClient()
     client.post(reverse("tasks"), {"text": "did something"}, format="json")
 
     response = client.get(reverse("tasks"))
@@ -71,8 +66,7 @@ def test_get_tasks_lists_completed_tasks(monkeypatch):
     assert tasks[0]["value"] == 5
 
 
-def test_get_tasks_empty_when_none_completed():
-    client = APIClient()
+def test_get_tasks_empty_when_none_completed(client):
     response = client.get(reverse("tasks"))
     assert response.status_code == 200
     assert response.json()["tasks"] == []

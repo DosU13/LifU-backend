@@ -1,5 +1,4 @@
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 from core.enums import BASE_ELEMENTS, CollectableRarity, Element
 from services import container
@@ -17,8 +16,7 @@ def _seed_stock(stock: dict) -> None:
     container.get_repos().collectables.adjust(stock)
 
 
-def test_get_collectables_empty_initially():
-    client = APIClient()
+def test_get_collectables_empty_initially(client):
     response = client.get(reverse("collectables"))
 
     assert response.status_code == 200
@@ -28,9 +26,8 @@ def test_get_collectables_empty_initially():
     assert body["stocks"]["FIRE_FRAGMENT"] == 0
 
 
-def test_merge_up_happy_path():
+def test_merge_up_happy_path(client):
     _seed_stock({(Element.FIRE, CollectableRarity.FRAGMENT): 3})
-    client = APIClient()
 
     response = client.post(
         reverse("collectables-merge"),
@@ -44,9 +41,8 @@ def test_merge_up_happy_path():
     assert stocks["FIRE_SHARD"] == 1
 
 
-def test_merge_up_rejects_core():
+def test_merge_up_rejects_core(client):
     _seed_stock({(Element.FIRE, CollectableRarity.CORE): 3})
-    client = APIClient()
 
     response = client.post(
         reverse("collectables-merge"),
@@ -58,8 +54,7 @@ def test_merge_up_rejects_core():
     assert response.json()["error"]["code"] == "INVALID_MERGE"
 
 
-def test_merge_up_insufficient_stock():
-    client = APIClient()
+def test_merge_up_insufficient_stock(client):
     response = client.post(
         reverse("collectables-merge"),
         {"element": "FIRE", "rarity": "FRAGMENT"},
@@ -70,8 +65,7 @@ def test_merge_up_insufficient_stock():
     assert response.json()["error"]["code"] == "INSUFFICIENT_COLLECTABLES"
 
 
-def test_merge_up_rejects_unknown_element():
-    client = APIClient()
+def test_merge_up_rejects_unknown_element(client):
     response = client.post(
         reverse("collectables-merge"),
         {"element": "NOT_AN_ELEMENT", "rarity": "FRAGMENT"},
@@ -80,10 +74,9 @@ def test_merge_up_rejects_unknown_element():
     assert response.status_code == 400
 
 
-def test_harmony_merge_happy_path(monkeypatch):
+def test_harmony_merge_happy_path(client, monkeypatch):
     _seed_stock({(e, CollectableRarity.FRAGMENT): 1 for e in BASE_ELEMENTS})
     monkeypatch.setattr(container, "get_rng", lambda: _ScriptedRng([0.9]))  # fails immediately
-    client = APIClient()
 
     response = client.post(
         reverse("collectables-harmony"), {"rarity": "FRAGMENT"}, format="json"
@@ -98,9 +91,8 @@ def test_harmony_merge_happy_path(monkeypatch):
         assert body["stocks"][f"{element.value}_FRAGMENT"] == 0
 
 
-def test_harmony_merge_insufficient_stock(monkeypatch):
+def test_harmony_merge_insufficient_stock(client, monkeypatch):
     monkeypatch.setattr(container, "get_rng", lambda: _ScriptedRng([0.9]))
-    client = APIClient()
 
     response = client.post(
         reverse("collectables-harmony"), {"rarity": "FRAGMENT"}, format="json"
@@ -110,7 +102,7 @@ def test_harmony_merge_insufficient_stock(monkeypatch):
     assert response.json()["error"]["code"] == "INSUFFICIENT_COLLECTABLES"
 
 
-def test_combine_happy_path():
+def test_combine_happy_path(client):
     _seed_stock(
         {
             (Element.FIRE, CollectableRarity.SHARD): 1,
@@ -118,7 +110,6 @@ def test_combine_happy_path():
             (Element.HARMONY, CollectableRarity.SHARD): 1,
         }
     )
-    client = APIClient()
 
     response = client.post(
         reverse("collectables-combine"),
@@ -135,14 +126,13 @@ def test_combine_happy_path():
     assert body["stocks"]["HARMONY_SHARD"] == 0
 
 
-def test_combine_rejects_invalid_pair():
+def test_combine_rejects_invalid_pair(client):
     _seed_stock(
         {
             (Element.FIRE, CollectableRarity.SHARD): 5,
             (Element.HARMONY, CollectableRarity.SHARD): 5,
         }
     )
-    client = APIClient()
 
     response = client.post(
         reverse("collectables-combine"),
@@ -154,9 +144,8 @@ def test_combine_rejects_invalid_pair():
     assert response.json()["error"]["code"] == "INVALID_MERGE"
 
 
-def test_sell_happy_path():
+def test_sell_happy_path(client):
     _seed_stock({(Element.EARTH, CollectableRarity.CRYSTAL): 5})
-    client = APIClient()
 
     response = client.post(
         reverse("collectables-sell"),
@@ -170,8 +159,7 @@ def test_sell_happy_path():
     assert body["stocks"]["EARTH_CRYSTAL"] == 2
 
 
-def test_sell_insufficient_stock():
-    client = APIClient()
+def test_sell_insufficient_stock(client):
     response = client.post(
         reverse("collectables-sell"),
         {"element": "EARTH", "rarity": "CRYSTAL", "count": 1},
@@ -182,9 +170,8 @@ def test_sell_insufficient_stock():
     assert response.json()["error"]["code"] == "INSUFFICIENT_COLLECTABLES"
 
 
-def test_sell_rejects_non_positive_count():
+def test_sell_rejects_non_positive_count(client):
     _seed_stock({(Element.EARTH, CollectableRarity.CRYSTAL): 5})
-    client = APIClient()
 
     response = client.post(
         reverse("collectables-sell"),

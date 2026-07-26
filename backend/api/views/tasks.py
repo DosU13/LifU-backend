@@ -10,7 +10,6 @@ from api.serializers import (
     TaskListResponseSerializer,
 )
 from core.errors import AIResponseInvalid
-from services.container import get_task_service
 
 
 class TaskListCreateView(APIView):
@@ -24,7 +23,7 @@ class TaskListCreateView(APIView):
         text = request_serializer.validated_data["text"]
 
         try:
-            task = get_task_service().complete_task(text)
+            task = request.game_context.task_service().complete_task(text)
         except AIResponseInvalid:
             return Response(
                 {"error": {"code": "AI_INVALID", "message": "The AI response was invalid."}},
@@ -46,5 +45,5 @@ class TaskListCreateView(APIView):
             days = int(request.query_params.get("days", 30))
         except (TypeError, ValueError):
             days = 30
-        tasks = get_task_service().list_recent(days=days)
+        tasks = request.game_context.task_service().list_recent(days=days)
         return Response(TaskListResponseSerializer({"tasks": tasks}).data)

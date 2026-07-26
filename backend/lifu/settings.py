@@ -50,15 +50,16 @@ TEMPLATES = [
 WSGI_APPLICATION = "lifu.wsgi.application"
 ASGI_APPLICATION = "lifu.asgi.application"
 
-# No relational database is used for game data (Firebase or in-memory via the
-# repository abstraction handles that — see ARCHITECTURE.md §6). This local
-# sqlite db exists only to satisfy Django's session/auth machinery.
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+# No relational database is used at all: game data lives behind the repository
+# abstraction (ARCHITECTURE.md §6) and the owner session is a signed cookie,
+# so there is nothing to migrate and nothing to back up here.
+DATABASES = {}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days — this is a single-user game
 
 AUTH_PASSWORD_VALIDATORS = []
 
@@ -72,12 +73,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
+        "api.authentication.GameAuthentication",
     ],
+    # Game endpoints are owner-or-trial by default; public ones opt out with
+    # permission_classes = [].
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+        "api.permissions.GamePermission",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "api.errors.exception_handler",
 }
 
 SPECTACULAR_SETTINGS = {
@@ -100,3 +104,6 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 DEVIANTART_CLIENT_ID = os.environ.get("DEVIANTART_CLIENT_ID", "")
 DEVIANTART_CLIENT_SECRET = os.environ.get("DEVIANTART_CLIENT_SECRET", "")
 JAMENDO_CLIENT_ID = os.environ.get("JAMENDO_CLIENT_ID", "")
+FRIEND_LINK_BASE_URL = os.environ.get("FRIEND_LINK_BASE_URL", "https://lifu.doslan.com").rstrip(
+    "/"
+)

@@ -7,6 +7,8 @@ from rest_framework.views import APIView
 class HealthView(APIView):
     """Liveness check — no auth, no dependencies."""
 
+    permission_classes = []
+
     @extend_schema(responses={200: {"type": "object", "properties": {"ok": {"type": "boolean"}}}})
     def get(self, request: Request) -> Response:
         return Response({"ok": True})

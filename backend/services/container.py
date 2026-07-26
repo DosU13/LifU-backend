@@ -9,23 +9,17 @@ from core.rng import Rng, SystemRng
 from providers.base import ContentProvider
 from providers.chain import build_content_provider
 from repos.factory import RepoBundle, build_repos
-from services.economy_service import EconomyService
-from services.merger_service import MergerService
-from services.rarity_service import RarityService
-from services.reward_service import RewardService
-from services.stats_service import StatsService
-from services.task_service import TaskService
-from services.treasure_service import TreasureService
+from services.context import GameContext
+from services.trial import get_trial_store
+
+SESSION_OWNER_KEY = "is_owner"
+TRIAL_TOKEN_HEADER = "HTTP_X_TRIAL_TOKEN"
 
 
 @lru_cache(maxsize=1)
 def get_repos() -> RepoBundle:
-    """Process-wide repository bundle.
-
-    Memory-only for now — real/trial backend selection per request context
-    lands in Phase 11 (auth/trial).
-    """
-    return build_repos("memory")
+    """The owner's repositories, per REPO_BACKEND."""
+    return build_repos(settings.REPO_BACKEND)
 
 
 @lru_cache(maxsize=1)
@@ -40,40 +34,6 @@ def get_rng() -> Rng:
     return SystemRng()
 
 
-def get_task_service() -> TaskService:
-    repos = get_repos()
-    return TaskService(tasks=repos.tasks, collectables=repos.collectables, ai=get_ai_client())
-
-
-def get_stats_service() -> StatsService:
-    return StatsService(tasks=get_repos().tasks, timezone_name=settings.TIME_ZONE)
-
-
-def get_merger_service() -> MergerService:
-    return MergerService(collectables=get_repos().collectables, rng=get_rng())
-
-
-def get_economy_service() -> EconomyService:
-    repos = get_repos()
-    return EconomyService(collectables=repos.collectables, wallet=repos.wallet)
-
-
-def get_rarity_service() -> RarityService:
-    return RarityService(receptacles=get_repos().receptacles)
-
-
-def get_reward_service() -> RewardService:
-    repos = get_repos()
-    return RewardService(
-        receptacles=repos.receptacles,
-        collectables=repos.collectables,
-        wallet=repos.wallet,
-        rarity=get_rarity_service(),
-        ai=get_ai_client(),
-        rng=get_rng(),
-    )
-
-
 @lru_cache(maxsize=1)
 def get_content_provider() -> ContentProvider:
     return build_content_provider(
@@ -84,15 +44,34 @@ def get_content_provider() -> ContentProvider:
     )
 
 
-def get_treasure_service() -> TreasureService:
-    repos = get_repos()
-    return TreasureService(
-        treasures=repos.treasures,
-        receptacles=repos.receptacles,
-        wallet=repos.wallet,
-        meta=repos.meta,
-        rarity=get_rarity_service(),
-        content=get_content_provider(),
+def owner_context() -> GameContext:
+    """The real game: persistent repositories and the real AI.
+
+    Built fresh each call but from cached collaborators, so the underlying
+    state is shared while tests can still swap any single piece.
+    """
+    return GameContext(
+        repos=get_repos(),
+        ai=get_ai_client(),
         rng=get_rng(),
+        content=get_content_provider(),
         timezone_name=settings.TIME_ZONE,
+        is_trial=False,
     )
+
+
+def context_for(request) -> GameContext | None:
+    """Resolve the caller's world, or None if they are not entitled to one.
+
+    The owner's session wins; otherwise an X-Trial-Token header selects a
+    sandbox. Nothing else grants access.
+    """
+    if request.session.get(SESSION_OWNER_KEY):
+        return owner_context()
+
+    token = request.META.get(TRIAL_TOKEN_HEADER)
+    if token:
+        session = get_trial_store().get(token)
+        if session is not None:
+            return session.context
+    return None

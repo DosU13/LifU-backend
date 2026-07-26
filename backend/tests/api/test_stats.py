@@ -1,12 +1,10 @@
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 from aiclients.fake import FakeAIClient
 from services import container
 
 
-def test_stats_empty_initially():
-    client = APIClient()
+def test_stats_empty_initially(client):
     response = client.get(reverse("stats"))
 
     assert response.status_code == 200
@@ -16,7 +14,7 @@ def test_stats_empty_initially():
     assert all(v == 0.0 for v in body["virtue_means"].values())
 
 
-def test_stats_reflect_a_completed_task(monkeypatch):
+def test_stats_reflect_a_completed_task(client, monkeypatch):
     fake = FakeAIClient(
         [
             {
@@ -30,7 +28,6 @@ def test_stats_reflect_a_completed_task(monkeypatch):
         ]
     )
     monkeypatch.setattr(container, "get_ai_client", lambda: fake)
-    client = APIClient()
     client.post(reverse("tasks"), {"text": "did something"}, format="json")
 
     response = client.get(reverse("stats"))

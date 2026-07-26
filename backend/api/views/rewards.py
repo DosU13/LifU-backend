@@ -7,7 +7,6 @@ from rest_framework.views import APIView
 from api.serializers import RewardCreateRequestSerializer, serialize_receptacle
 from core.enums import ReceptacleState
 from core.errors import AIResponseInvalid
-from services.container import get_reward_service
 
 
 class RewardCreateView(APIView):
@@ -18,7 +17,7 @@ class RewardCreateView(APIView):
         data = serializer.validated_data
 
         try:
-            receptacle = get_reward_service().submit_reward(
+            receptacle = request.game_context.reward_service().submit_reward(
                 text=data["text"],
                 is_secret=data["is_secret"],
                 friend_name=data.get("friend_name"),
@@ -61,5 +60,5 @@ class ReceptacleListView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        receptacles = get_reward_service().list_by_state(state)
+        receptacles = request.game_context.reward_service().list_by_state(state)
         return Response({"receptacles": [serialize_receptacle(r) for r in receptacles]})
