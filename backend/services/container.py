@@ -9,6 +9,8 @@ from core.rng import Rng, SystemRng
 from repos.factory import RepoBundle, build_repos
 from services.economy_service import EconomyService
 from services.merger_service import MergerService
+from services.rarity_service import RarityService
+from services.reward_service import RewardService
 from services.stats_service import StatsService
 from services.task_service import TaskService
 
@@ -51,3 +53,16 @@ def get_merger_service() -> MergerService:
 def get_economy_service() -> EconomyService:
     repos = get_repos()
     return EconomyService(collectables=repos.collectables, wallet=repos.wallet)
+
+
+def get_rarity_service() -> RarityService:
+    return RarityService(receptacles=get_repos().receptacles)
+
+
+def get_reward_service() -> RewardService:
+    return RewardService(
+        receptacles=get_repos().receptacles,
+        rarity=get_rarity_service(),
+        ai=get_ai_client(),
+        rng=get_rng(),
+    )

@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
-from core.entities import CollectableStock
-from core.enums import CollectableRarity, Element, TaskVirtue
+from core.entities import CollectableStock, Receptacle
+from core.enums import CollectableRarity, Element, ReceptacleState, TaskVirtue
+from core.mappings import key_for_receptacle
 
 
 def _stringify_keys(d: dict) -> dict:
@@ -107,3 +108,40 @@ class SellRequestSerializer(serializers.Serializer):
 
     def validate_rarity(self, value: str) -> CollectableRarity:
         return CollectableRarity[value]
+
+
+class RewardCreateRequestSerializer(serializers.Serializer):
+    text = serializers.CharField(allow_blank=False, trim_whitespace=True, max_length=4000)
+    is_secret = serializers.BooleanField(default=False)
+    friend_name = serializers.CharField(required=False, allow_null=True, max_length=100)
+
+
+def serialize_receptacle(receptacle: Receptacle) -> dict:
+    """Serialize a receptacle for the API.
+
+    Privacy rule (ARCHITECTURE §2): the reward_text of a secret gift is never
+    exposed until the receptacle has actually been opened.
+    """
+    is_opened = receptacle.state is ReceptacleState.OPENED
+    key_element, key_rarity = key_for_receptacle(receptacle.virtue, receptacle.rarity)
+
+    data = {
+        "id": receptacle.id,
+        "state": receptacle.state.value,
+        "virtue": receptacle.virtue.value,
+        "rarity": receptacle.rarity.name,
+        "value": receptacle.value,
+        "is_generated": receptacle.is_generated,
+        "is_secret": receptacle.is_secret,
+        "friend_name": receptacle.friend_name,
+        "created_at": receptacle.created_at,
+        "opened_at": receptacle.opened_at,
+        "key_needed": {"element": key_element.value, "rarity": key_rarity.name},
+    }
+
+    if receptacle.is_secret and not is_opened:
+        data["reward_text"] = None
+    else:
+        data["reward_text"] = receptacle.reward_text
+
+    return data
