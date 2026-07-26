@@ -1,10 +1,15 @@
 from rest_framework import serializers
 
-from core.enums import TaskVirtue
+from core.entities import CollectableStock
+from core.enums import CollectableRarity, Element, TaskVirtue
 
 
 def _stringify_keys(d: dict) -> dict:
     return {key.value: value for key, value in d.items()}
+
+
+def serialize_stocks(stock: CollectableStock) -> dict[str, int]:
+    return {f"{element.value}_{rarity.name}": count for (element, rarity), count in stock.items()}
 
 
 class TaskCreateRequestSerializer(serializers.Serializer):
@@ -52,3 +57,53 @@ class StatsResponseSerializer(serializers.Serializer):
 
     def get_virtue_means(self, stats) -> dict[str, float]:
         return {virtue.value: stats.virtue_means[virtue] for virtue in TaskVirtue}
+
+
+class CollectablesStateResponseSerializer(serializers.Serializer):
+    stocks = serializers.DictField(child=serializers.IntegerField())
+    coins = serializers.IntegerField()
+
+
+class MergeRequestSerializer(serializers.Serializer):
+    element = serializers.ChoiceField(choices=[e.value for e in Element])
+    rarity = serializers.ChoiceField(choices=[r.name for r in CollectableRarity])
+
+    def validate_element(self, value: str) -> Element:
+        return Element(value)
+
+    def validate_rarity(self, value: str) -> CollectableRarity:
+        return CollectableRarity[value]
+
+
+class HarmonyRequestSerializer(serializers.Serializer):
+    rarity = serializers.ChoiceField(choices=[r.name for r in CollectableRarity])
+
+    def validate_rarity(self, value: str) -> CollectableRarity:
+        return CollectableRarity[value]
+
+
+class CombineRequestSerializer(serializers.Serializer):
+    element_a = serializers.ChoiceField(choices=[e.value for e in Element])
+    element_b = serializers.ChoiceField(choices=[e.value for e in Element])
+    rarity = serializers.ChoiceField(choices=[r.name for r in CollectableRarity])
+
+    def validate_element_a(self, value: str) -> Element:
+        return Element(value)
+
+    def validate_element_b(self, value: str) -> Element:
+        return Element(value)
+
+    def validate_rarity(self, value: str) -> CollectableRarity:
+        return CollectableRarity[value]
+
+
+class SellRequestSerializer(serializers.Serializer):
+    element = serializers.ChoiceField(choices=[e.value for e in Element])
+    rarity = serializers.ChoiceField(choices=[r.name for r in CollectableRarity])
+    count = serializers.IntegerField(min_value=1)
+
+    def validate_element(self, value: str) -> Element:
+        return Element(value)
+
+    def validate_rarity(self, value: str) -> CollectableRarity:
+        return CollectableRarity[value]

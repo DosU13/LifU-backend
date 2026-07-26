@@ -14,9 +14,11 @@ def _clear(cached_fn) -> None:
 
 @pytest.fixture(autouse=True)
 def _reset_container_caches():
-    """Container singletons (memory repos, AI client) must not leak between tests."""
+    """Container singletons (memory repos, AI client, rng) must not leak between tests."""
     _clear(container.get_repos)
     _clear(container.get_ai_client)
+    _clear(container.get_rng)
     yield
     _clear(container.get_repos)
     _clear(container.get_ai_client)
+    _clear(container.get_rng)
