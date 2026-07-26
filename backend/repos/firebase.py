@@ -232,6 +232,7 @@ class FirebaseWalletRepository(WalletRepository):
 
 class FirebaseReceptacleRepository(ReceptacleRepository):
     def __init__(self, db: firestore.Client, namespace: str = "") -> None:
+        self._db = db
         self._collection = db.collection(f"{namespace}receptacles")
 
     def add(self, receptacle: Receptacle) -> Receptacle:
@@ -249,6 +250,19 @@ class FirebaseReceptacleRepository(ReceptacleRepository):
         if not snapshot.exists:
             raise NotFound(f"no receptacle with id {receptacle_id}")
         return _doc_to_receptacle(snapshot.id, snapshot.to_dict())
+
+    def get_many(self, receptacle_ids: list[str]) -> list[Receptacle]:
+        if not receptacle_ids:
+            return []
+        # One batched RPC instead of a round trip per id. Firestore does not
+        # promise an order, so results are re-keyed and returned as requested.
+        references = [self._collection.document(rid) for rid in set(receptacle_ids)]
+        by_id = {
+            snapshot.id: _doc_to_receptacle(snapshot.id, snapshot.to_dict())
+            for snapshot in self._db.get_all(references)
+            if snapshot.exists
+        }
+        return [by_id[rid] for rid in receptacle_ids if rid in by_id]
 
     def update(self, receptacle: Receptacle) -> None:
         doc_ref = self._collection.document(receptacle.id)

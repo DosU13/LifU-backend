@@ -110,6 +110,15 @@ class MemoryReceptacleRepository(ReceptacleRepository):
             except KeyError as exc:
                 raise NotFound(f"no receptacle with id {receptacle_id}") from exc
 
+    def get_many(self, receptacle_ids: list[str]) -> list[Receptacle]:
+        with self._lock:
+            found = []
+            for receptacle_id in receptacle_ids:
+                receptacle = self._receptacles.get(receptacle_id)
+                if receptacle is not None:
+                    found.append(deepcopy(receptacle))
+            return found
+
     def update(self, receptacle: Receptacle) -> None:
         with self._lock:
             if receptacle.id not in self._receptacles:

@@ -165,6 +165,41 @@ class ReceptacleRepositoryContract:
         assert fetched.id == stored.id
         assert fetched.reward_text == "a nice dinner"
 
+    def test_get_many_returns_receptacles_in_the_requested_order(self, repo):
+        first = repo.add(self._make(value=10))
+        second = repo.add(self._make(value=20))
+        third = repo.add(self._make(value=30))
+
+        ordered = repo.get_many([third.id, first.id, second.id])
+
+        assert [r.id for r in ordered] == [third.id, first.id, second.id]
+        assert [r.value for r in ordered] == [30, 10, 20]
+
+    def test_get_many_skips_ids_that_do_not_exist(self, repo):
+        stored = repo.add(self._make())
+
+        found = repo.get_many(["ghost-1", stored.id, "ghost-2"])
+
+        assert [r.id for r in found] == [stored.id]
+
+    def test_get_many_with_no_ids_returns_nothing(self, repo):
+        repo.add(self._make())
+        assert repo.get_many([]) == []
+
+    def test_get_many_returns_one_entry_per_requested_id(self, repo):
+        stored = repo.add(self._make())
+        assert [r.id for r in repo.get_many([stored.id, stored.id])] == [stored.id, stored.id]
+
+    def test_get_many_returns_fully_populated_receptacles(self, repo):
+        stored = repo.add(self._make())
+
+        fetched = repo.get_many([stored.id])[0]
+
+        assert fetched.reward_text == "a nice dinner"
+        assert fetched.virtue == Virtue.SERENITY
+        assert fetched.rarity == ReceptacleRarity.SAFE
+        assert fetched.state == ReceptacleState.IN_POOL
+
     def test_update_persists_changes(self, repo):
         stored = repo.add(self._make())
         stored.state = ReceptacleState.DROPPED

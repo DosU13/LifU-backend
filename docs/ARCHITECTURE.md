@@ -230,6 +230,10 @@ class MetaRepository(ABC):
 
 **Firestore layout** (single user, no per-user nesting): collections `tasks`, `receptacles`, `treasures`, `friend_links`; singleton docs `wallet/main`, `collectables/main`, `meta/main`.
 
+**Read cost.** Every Firestore call is a network round trip, so the count of calls — not the volume of data — sets the latency. `ReceptacleRepository.get_many()` exists for exactly this: reading a treasure's contents one id at a time cost 24 round trips where a batch costs 3 (measured 5.4 s → 0.6 s against a live project). Prefer a batched read whenever the ids are already known; reach for `get()` only for a single receptacle.
+
+Measured against the current project, one round trip is ≈200 ms, which puts a floor of ~1.4 s on `GET /api/state` from its six remaining queries. That is **region latency, not code** — if the game ever feels slow, check that the Firestore project sits near the owner before optimising anything else.
+
 ---
 
 ## 7. Services — exact algorithms

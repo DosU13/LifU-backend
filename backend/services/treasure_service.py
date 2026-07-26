@@ -87,7 +87,8 @@ class TreasureService:
         return sorted(self._treasures.get_all(), key=lambda t: t.slot)
 
     def contents(self, treasure: Treasure) -> list[Receptacle]:
-        return [self._receptacles.get(rid) for rid in treasure.receptacle_ids]
+        """The receptacles a treasure still holds, read in one batch."""
+        return self._receptacles.get_many(treasure.receptacle_ids)
 
     def price(self, treasure: Treasure) -> int:
         """The treasure's fixed price, set when it was generated (ARCHITECTURE §7.6).

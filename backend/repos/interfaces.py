@@ -50,6 +50,15 @@ class ReceptacleRepository(ABC):
         """Raises NotFound if no receptacle with this id exists."""
 
     @abstractmethod
+    def get_many(self, receptacle_ids: list[str]) -> list[Receptacle]:
+        """Fetch several receptacles in one round trip.
+
+        Returns them in the order requested, silently skipping ids that no
+        longer exist — callers use this for display, where a vanished
+        receptacle should simply not appear rather than fail the whole read.
+        """
+
+    @abstractmethod
     def update(self, receptacle: Receptacle) -> None:
         """Raises NotFound if no receptacle with this id exists yet."""
 
