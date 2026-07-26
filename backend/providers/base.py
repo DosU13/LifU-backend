@@ -3,6 +3,10 @@ from typing import Protocol, runtime_checkable
 from core.entities import GeneratedContent
 from core.enums import ReceptacleRarity
 
+# Every outbound HTTP call in this package uses this timeout. A slow provider
+# must never hold up a treasure buy.
+HTTP_TIMEOUT_SECONDS = 6.0
+
 
 @runtime_checkable
 class ContentProvider(Protocol):
@@ -14,3 +18,13 @@ class ContentProvider(Protocol):
         a treasure buy.
         """
         ...
+
+
+@runtime_checkable
+class ContentSource(Protocol):
+    """A single upstream (one API). Unlike ContentProvider, this MAY raise —
+
+    the chain in providers/chain.py catches and moves on to the next source.
+    """
+
+    def fetch(self) -> GeneratedContent: ...

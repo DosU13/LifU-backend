@@ -7,7 +7,7 @@ from aiclients.groq_client import GroqClient
 from aiclients.random_client import RandomAIClient
 from core.rng import Rng, SystemRng
 from providers.base import ContentProvider
-from providers.fallback import FallbackContentProvider
+from providers.chain import build_content_provider
 from repos.factory import RepoBundle, build_repos
 from services.economy_service import EconomyService
 from services.merger_service import MergerService
@@ -76,7 +76,12 @@ def get_reward_service() -> RewardService:
 
 @lru_cache(maxsize=1)
 def get_content_provider() -> ContentProvider:
-    return FallbackContentProvider(rng=get_rng())
+    return build_content_provider(
+        rng=get_rng(),
+        deviantart_client_id=settings.DEVIANTART_CLIENT_ID,
+        deviantart_client_secret=settings.DEVIANTART_CLIENT_SECRET,
+        jamendo_client_id=settings.JAMENDO_CLIENT_ID,
+    )
 
 
 def get_treasure_service() -> TreasureService:

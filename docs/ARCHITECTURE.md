@@ -37,11 +37,12 @@ LifU/
 │   │   ├── prompts.py     # system prompts (kept in sync with docs/AI_PROMPTS.md)
 │   │   └── validation.py  # parse/clamp/retry pipeline (§8)
 │   ├── providers/         # content for generated receptacles (§7.6)
-│   │   ├── base.py        # QuoteProvider / DiscoveryProvider protocols
-│   │   ├── quotes.py      # live quote/fact APIs + local fallback
-│   │   ├── art.py         # DeviantArt API provider
-│   │   ├── music.py       # Jamendo/iTunes provider
-│   │   └── fallback.py    # local curated lists, used only when live fetch fails
+│   │   ├── base.py        # ContentProvider (never raises) / ContentSource (may raise)
+│   │   ├── quotes.py      # ZenQuotes + UselessFacts (no API key)
+│   │   ├── art.py         # Art Institute of Chicago (no key) + DeviantArt (key)
+│   │   ├── music.py       # iTunes Search (no key) + Jamendo (key)
+│   │   ├── chain.py       # shuffles sources, degrades on failure, then falls back
+│   │   └── fallback.py    # local curated lists, used only when every source fails
 │   ├── services/          # game logic, constructor-injected repos/ai/rng (§7)
 │   │   ├── container.py   # wires services per request context (real vs trial)
 │   │   ├── task_service.py
@@ -325,6 +326,16 @@ if t.receptacle_ids empty: delete t; generate(slot)   # regeneration
 Note: a pity counter past its threshold that can't fire (rarity absent) keeps incrementing and fires on the first fulfillable buy. Counters never migrate to a new treasure.
 
 **discard(treasure_id):** allowed iff `meta.last_discard_date != today(TIMEZONE)` — one discard per day **across all slots**. Contents return to IN_POOL, treasure deleted, `generate(slot)`, record date. Error otherwise: `DiscardAlreadyUsed`.
+
+**Generated content (`providers/`).** Pouches draw a quote or fact; Sacks draw art or music. Each rarity has a list of live sources; `ChainContentProvider` shuffles the list (so repeat drops vary), tries each in turn, and treats **any** failure — network, timeout, rate limit, malformed payload, empty result — as "try the next one", ending at the local `FallbackContentProvider`. `fetch()` therefore never raises and a treasure buy can always complete.
+
+| Rarity | Sources (in the pool) | Key needed |
+|---|---|---|
+| Pouch | ZenQuotes, UselessFacts | no |
+| Sack | Art Institute of Chicago, iTunes Search | no |
+| Sack | DeviantArt, Jamendo | yes — joins the pool only when configured |
+
+Live sources use a random page/offset (and a random broad genre or topic) rather than a fixed catalogue, so what appears is a genuine surprise to the owner. Every outbound call uses `HTTP_TIMEOUT_SECONDS = 6.0`.
 
 ### 7.7 EconomyService.sell(element, rarity, count) / StatsService
 
