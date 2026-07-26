@@ -4,13 +4,22 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.serializers import RewardCreateRequestSerializer, serialize_receptacle
+from api.serializers import (
+    ErrorResponseSerializer,
+    ReceptacleListResponseSerializer,
+    ReceptacleResponseSerializer,
+    RewardCreateRequestSerializer,
+    serialize_receptacle,
+)
 from core.enums import ReceptacleState
 from core.errors import AIResponseInvalid
 
 
 class RewardCreateView(APIView):
-    @extend_schema(request=RewardCreateRequestSerializer, responses={200: dict})
+    @extend_schema(
+        request=RewardCreateRequestSerializer,
+        responses={200: ReceptacleResponseSerializer, 502: ErrorResponseSerializer},
+    )
     def post(self, request: Request) -> Response:
         serializer = RewardCreateRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -40,7 +49,7 @@ class ReceptacleListView(APIView):
                 description="Filter by state: IN_POOL, IN_TREASURE, DROPPED, OPENED",
             )
         ],
-        responses={200: dict},
+        responses={200: ReceptacleListResponseSerializer, 400: ErrorResponseSerializer},
     )
     def get(self, request: Request) -> Response:
         state_param = request.query_params.get("state")

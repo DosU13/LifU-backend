@@ -16,8 +16,6 @@ import type {
   Treasure,
 } from './types'
 
-const TRIAL_TOKEN_STORAGE_KEY = 'lifu.trialToken'
-
 /**
  * A failure the server described in its `{"error": {code, message}}` envelope.
  * `code` is the stable identifier to branch on; `message` is for humans.
@@ -42,25 +40,18 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Held in memory only, never persisted. A trial is meant to be a place to
+ * poke at the mechanics — reloading the page starts a fresh one rather than
+ * resuming, which is exactly what a sandbox should do.
+ */
 let trialToken: string | null = null
 
 export function setTrialToken(token: string | null): void {
   trialToken = token
-  try {
-    if (token) localStorage.setItem(TRIAL_TOKEN_STORAGE_KEY, token)
-    else localStorage.removeItem(TRIAL_TOKEN_STORAGE_KEY)
-  } catch {
-    // Storage can be unavailable (private mode); the in-memory token still works.
-  }
 }
 
 export function getTrialToken(): string | null {
-  if (trialToken) return trialToken
-  try {
-    trialToken = localStorage.getItem(TRIAL_TOKEN_STORAGE_KEY)
-  } catch {
-    trialToken = null
-  }
   return trialToken
 }
 

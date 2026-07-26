@@ -63,15 +63,19 @@ def owner_context() -> GameContext:
 def context_for(request) -> GameContext | None:
     """Resolve the caller's world, or None if they are not entitled to one.
 
-    The owner's session wins; otherwise an X-Trial-Token header selects a
-    sandbox. Nothing else grants access.
+    An X-Trial-Token header is checked first: it is an explicit, deliberate
+    credential, whereas the session cookie is ambient and gets attached to
+    every request. If the owner opens a friend link in their own browser, the
+    header is what they meant, and letting the cookie win would quietly serve
+    the real save behind a "Trial" badge.
     """
-    if request.session.get(SESSION_OWNER_KEY):
-        return owner_context()
-
     token = request.META.get(TRIAL_TOKEN_HEADER)
     if token:
         session = get_trial_store().get(token)
         if session is not None:
             return session.context
+        return None  # a token was offered and it is not valid — do not fall back
+
+    if request.session.get(SESSION_OWNER_KEY):
+        return owner_context()
     return None

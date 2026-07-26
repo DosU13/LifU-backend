@@ -1,3 +1,4 @@
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
 from rest_framework.authentication import BaseAuthentication
 
 
@@ -15,3 +16,26 @@ class GameAuthentication(BaseAuthentication):
 
     def authenticate_header(self, request) -> str:
         return "Session"
+
+
+class GameAuthenticationScheme(OpenApiAuthenticationExtension):
+    """Describes the two ways in for /api/docs.
+
+    Registered by import (drf-spectacular discovers subclasses), so swagger
+    shows the trial header alongside the owner's session cookie.
+    """
+
+    target_class = "api.authentication.GameAuthentication"
+    name = "trialToken"
+
+    def get_security_definition(self, auto_schema) -> dict:
+        return {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-Trial-Token",
+            "description": (
+                "A friend's sandbox token from POST /api/trial/session. "
+                "The owner instead authenticates with the session cookie set "
+                "by POST /api/auth/login."
+            ),
+        }

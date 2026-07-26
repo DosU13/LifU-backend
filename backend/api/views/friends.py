@@ -7,6 +7,13 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api.serializers import (
+    ErrorResponseSerializer,
+    FriendLinkListResponseSerializer,
+    FriendLinkSerializer,
+    PublicFriendResponseSerializer,
+    TrialSessionResponseSerializer,
+)
 from core.errors import AlreadyExists
 from services.container import owner_context
 from services.trial import get_trial_store
@@ -33,7 +40,7 @@ class FriendCreateRequestSerializer(serializers.Serializer):
 class FriendLinkListCreateView(APIView):
     """Owner-only: friend links are how the owner hands out trial URLs."""
 
-    @extend_schema(responses={200: dict})
+    @extend_schema(responses={200: FriendLinkListResponseSerializer, 403: ErrorResponseSerializer})
     def get(self, request: Request) -> Response:
         if request.game_context.is_trial:
             return Response(
@@ -45,7 +52,14 @@ class FriendLinkListCreateView(APIView):
             {"friends": [{"name": link.name, "url": friend_url(link.name)} for link in links]}
         )
 
-    @extend_schema(request=FriendCreateRequestSerializer, responses={200: dict})
+    @extend_schema(
+        request=FriendCreateRequestSerializer,
+        responses={
+            200: FriendLinkSerializer,
+            400: ErrorResponseSerializer,
+            403: ErrorResponseSerializer,
+        },
+    )
     def post(self, request: Request) -> Response:
         if request.game_context.is_trial:
             return Response(
@@ -72,7 +86,7 @@ class PublicFriendCheckView(APIView):
 
     permission_classes = []
 
-    @extend_schema(responses={200: dict})
+    @extend_schema(responses={200: PublicFriendResponseSerializer})
     def get(self, request: Request, name: str) -> Response:
         link = owner_context().repos.friend_links.get(name.strip().lower())
         return Response({"valid": link is not None, "name": name})
@@ -91,7 +105,10 @@ class TrialSessionView(APIView):
 
     permission_classes = []
 
-    @extend_schema(request=TrialSessionSerializer, responses={200: dict})
+    @extend_schema(
+        request=TrialSessionSerializer,
+        responses={200: TrialSessionResponseSerializer, 404: ErrorResponseSerializer},
+    )
     def post(self, request: Request) -> Response:
         serializer = TrialSessionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

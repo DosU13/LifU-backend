@@ -4,7 +4,16 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.serializers import serialize_receptacle, serialize_stocks
+from api.serializers import (
+    ErrorResponseSerializer,
+    ReceptacleOpenResponseSerializer,
+    StateResponseSerializer,
+    TreasureBuyResponseSerializer,
+    TreasureDiscardResponseSerializer,
+    TreasureListResponseSerializer,
+    serialize_receptacle,
+    serialize_stocks,
+)
 from core.enums import ReceptacleState
 from core.errors import DiscardAlreadyUsed, DomainError, InsufficientCoins, MissingKey, NotFound
 
@@ -36,7 +45,7 @@ def _serialize_treasure(service, treasure) -> dict:
 
 
 class TreasureListView(APIView):
-    @extend_schema(responses={200: dict})
+    @extend_schema(responses={200: TreasureListResponseSerializer})
     def get(self, request: Request) -> Response:
         service = request.game_context.treasure_service()
         treasures = service.get_all()
@@ -44,7 +53,14 @@ class TreasureListView(APIView):
 
 
 class TreasureBuyView(APIView):
-    @extend_schema(request=None, responses={200: dict})
+    @extend_schema(
+        request=None,
+        responses={
+            200: TreasureBuyResponseSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+    )
     def post(self, request: Request, treasure_id: str) -> Response:
         service = request.game_context.treasure_service()
         try:
@@ -68,7 +84,14 @@ class TreasureBuyView(APIView):
 
 
 class TreasureDiscardView(APIView):
-    @extend_schema(request=None, responses={200: dict})
+    @extend_schema(
+        request=None,
+        responses={
+            200: TreasureDiscardResponseSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+    )
     def post(self, request: Request, treasure_id: str) -> Response:
         service = request.game_context.treasure_service()
         try:
@@ -83,7 +106,14 @@ class TreasureDiscardView(APIView):
 
 
 class ReceptacleOpenView(APIView):
-    @extend_schema(request=None, responses={200: dict})
+    @extend_schema(
+        request=None,
+        responses={
+            200: ReceptacleOpenResponseSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+        },
+    )
     def post(self, request: Request, receptacle_id: str) -> Response:
         try:
             reward_service = request.game_context.reward_service()
@@ -119,7 +149,7 @@ class ReceptacleOpenView(APIView):
 class StateView(APIView):
     """One call that boots the whole SPA (ARCHITECTURE §9)."""
 
-    @extend_schema(responses={200: dict})
+    @extend_schema(responses={200: StateResponseSerializer})
     def get(self, request: Request) -> Response:
         repos = request.game_context.repos
         treasure_service = request.game_context.treasure_service()

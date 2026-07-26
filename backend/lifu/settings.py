@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -89,11 +90,25 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Gamified productivity app — task valuation, rewards, treasures.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Element and rarity appear in several request bodies; name the shared
+    # choice sets once so the schema does not invent ElementBEnum and friends.
+    "ENUM_NAME_OVERRIDES": {
+        "ElementEnum": "api.serializers.ELEMENT_CHOICES",
+        "CollectableRarityEnum": "api.serializers.COLLECTABLE_RARITY_CHOICES",
+    },
 }
 
 CORS_ALLOWED_ORIGINS = [
-    o for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o
+    o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]
+# The owner signs in with a session cookie, so cross-origin calls have to be
+# allowed to carry credentials. That only works against an explicit origin
+# list — never a wildcard.
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [*default_headers, "x-trial-token"]
+
+# Django rejects cross-origin POSTs unless the origin is trusted here.
+CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith("http")]
 
 # --- LifU domain configuration (ARCHITECTURE.md §11) ---
 OWNER_PASSWORD = os.environ.get("OWNER_PASSWORD", "")

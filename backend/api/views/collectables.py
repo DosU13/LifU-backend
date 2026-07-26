@@ -7,9 +7,14 @@ from rest_framework.views import APIView
 from api.serializers import (
     CollectablesStateResponseSerializer,
     CombineRequestSerializer,
+    CombineResponseSerializer,
+    ErrorResponseSerializer,
     HarmonyRequestSerializer,
+    HarmonyResponseSerializer,
     MergeRequestSerializer,
     SellRequestSerializer,
+    SellResponseSerializer,
+    StocksResponseSerializer,
     serialize_stocks,
 )
 from core.errors import DomainError, InsufficientCollectables, InvalidMerge
@@ -32,7 +37,10 @@ class CollectablesStateView(APIView):
 
 
 class MergeUpView(APIView):
-    @extend_schema(request=MergeRequestSerializer, responses={200: dict})
+    @extend_schema(
+        request=MergeRequestSerializer,
+        responses={200: StocksResponseSerializer, 400: ErrorResponseSerializer},
+    )
     def post(self, request: Request) -> Response:
         serializer = MergeRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -49,7 +57,10 @@ class MergeUpView(APIView):
 
 
 class HarmonyMergeView(APIView):
-    @extend_schema(request=HarmonyRequestSerializer, responses={200: dict})
+    @extend_schema(
+        request=HarmonyRequestSerializer,
+        responses={200: HarmonyResponseSerializer, 400: ErrorResponseSerializer},
+    )
     def post(self, request: Request) -> Response:
         serializer = HarmonyRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -65,7 +76,10 @@ class HarmonyMergeView(APIView):
 
 
 class CombineView(APIView):
-    @extend_schema(request=CombineRequestSerializer, responses={200: dict})
+    @extend_schema(
+        request=CombineRequestSerializer,
+        responses={200: CombineResponseSerializer, 400: ErrorResponseSerializer},
+    )
     def post(self, request: Request) -> Response:
         serializer = CombineRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -84,7 +98,10 @@ class CombineView(APIView):
 
 
 class SellView(APIView):
-    @extend_schema(request=SellRequestSerializer, responses={200: dict})
+    @extend_schema(
+        request=SellRequestSerializer,
+        responses={200: SellResponseSerializer, 400: ErrorResponseSerializer},
+    )
     def post(self, request: Request) -> Response:
         serializer = SellRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

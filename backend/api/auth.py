@@ -7,6 +7,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from api.serializers import (
+    ErrorResponseSerializer,
+    OkResponseSerializer,
+    SessionResponseSerializer,
+)
 from services.container import SESSION_OWNER_KEY, context_for
 
 
@@ -17,7 +22,10 @@ class LoginRequestSerializer(serializers.Serializer):
 class LoginView(APIView):
     permission_classes = []
 
-    @extend_schema(request=LoginRequestSerializer, responses={200: dict})
+    @extend_schema(
+        request=LoginRequestSerializer,
+        responses={200: OkResponseSerializer, 401: ErrorResponseSerializer},
+    )
     def post(self, request: Request) -> Response:
         serializer = LoginRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -40,7 +48,7 @@ class LoginView(APIView):
 class LogoutView(APIView):
     permission_classes = []
 
-    @extend_schema(request=None, responses={200: dict})
+    @extend_schema(request=None, responses={200: OkResponseSerializer})
     def post(self, request: Request) -> Response:
         request.session.flush()
         return Response({"ok": True})
@@ -51,7 +59,7 @@ class SessionView(APIView):
 
     permission_classes = []
 
-    @extend_schema(responses={200: dict})
+    @extend_schema(responses={200: SessionResponseSerializer})
     def get(self, request: Request) -> Response:
         context = context_for(request)
         return Response(

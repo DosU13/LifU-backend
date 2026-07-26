@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { api } from './api'
 import { EventToasts } from './components/EventToasts'
+import { FriendGate } from './components/FriendGate'
 import { FriendLinksPanel } from './components/FriendLinksPanel'
 import { LoginGate } from './components/LoginGate'
 import { MergePanel } from './components/MergePanel'
@@ -84,13 +85,23 @@ function GameShell() {
   )
 }
 
+/** `/alex` is a friend's trial link; `/` is the owner's game. */
+function friendNameFromPath(): string | null {
+  const slug = window.location.pathname.replace(/^\/+|\/+$/g, '')
+  return /^[a-z0-9][a-z0-9_-]{0,30}$/.test(slug) ? slug : null
+}
+
 export function App() {
   const { authenticated, checking, check } = useSessionStore()
+  const [friendName] = useState(friendNameFromPath)
 
   useEffect(() => {
-    void check()
-  }, [check])
+    // A friend link never carries the owner's session; it starts from the gate.
+    if (friendName === null) void check()
+  }, [check, friendName])
 
+  if (authenticated) return <GameShell />
+  if (friendName !== null) return <FriendGate friendName={friendName} />
   if (checking) return <p className="muted centered">…</p>
-  return authenticated ? <GameShell /> : <LoginGate />
+  return <LoginGate />
 }

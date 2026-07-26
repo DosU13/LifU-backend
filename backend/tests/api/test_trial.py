@@ -145,6 +145,32 @@ def test_trial_changes_never_touch_the_owner_world(client, anon_client):
     assert client.get(reverse("state")).json()["coins"] == owner_coins_before
 
 
+def test_trial_token_wins_over_an_owner_session_on_the_same_client(client, anon_client):
+    """The owner opening their own friend link must get the sandbox, not the real save.
+
+    `client` is signed in as the owner. Adding a trial token to that same
+    client has to switch worlds — otherwise the ambient session cookie serves
+    real data behind a "Trial" badge.
+    """
+    _make_friend(client)
+    session = anon_client.post(
+        reverse("trial-session"), {"friend_name": "alex"}, format="json"
+    ).json()
+
+    owner_state = client.get(reverse("state")).json()
+    client.credentials(HTTP_X_TRIAL_TOKEN=session["token"])
+    trial_state = client.get(reverse("state")).json()
+
+    assert client.get(reverse("auth-session")).json()["is_trial"] is True
+    assert trial_state["coins"] == 100  # the seeded sandbox, not the owner's wallet
+    assert trial_state["coins"] != owner_state["coins"]
+
+
+def test_an_invalid_trial_token_never_falls_back_to_the_owner_session(client):
+    client.credentials(HTTP_X_TRIAL_TOKEN="not-a-real-token")
+    assert client.get(reverse("state")).status_code == 401
+
+
 def test_two_trial_tokens_are_isolated_from_each_other(client, anon_client):
     _make_friend(client, "alex")
     _make_friend(client, "sam")

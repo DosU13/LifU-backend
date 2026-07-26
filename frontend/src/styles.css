@@ -440,3 +440,40 @@ button.mini.sell:hover:not(:disabled) {
 .bar-fill.ready {
   background: #d4af37;
 }
+
+/* --- friend gate --- */
+
+.gate.wide {
+  max-width: 34rem;
+  margin: 8vh auto;
+  text-align: left;
+  padding: 0 1.25rem;
+}
+
+.gate.wide h1 {
+  text-align: center;
+}
+
+.lead {
+  font-size: 1.05rem;
+  margin-bottom: 1.5rem;
+}
+
+.explainer {
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.85rem;
+  margin: 0 0 1.5rem;
+}
+
+.explainer li {
+  line-height: 1.55;
+}
+
+.gate.wide > button {
+  display: block;
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.7rem;
+  font-size: 1rem;
+}
