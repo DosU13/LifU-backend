@@ -9,7 +9,10 @@ import { RewardComposer } from './components/RewardComposer'
 import { StateDebugView } from './components/StateDebugView'
 import { StatsPanel } from './components/StatsPanel'
 import { TaskComposer } from './components/TaskComposer'
+import { TreasurePanel } from './components/TreasurePanel'
+import { VaultPanel } from './components/VaultPanel'
 import { WalletBadge } from './components/WalletBadge'
+import { SceneCanvas } from './scene/SceneCanvas'
 import { useSessionStore } from './state/session'
 import { useGameStore } from './state/store'
 import type { FriendLink } from './types'
@@ -63,14 +66,19 @@ function GameShell() {
       {loading && !hydrated && <p className="muted">Loading your world…</p>}
 
       {hydrated && (
-        <div className="grid">
-          <TaskComposer />
-          <RewardComposer friends={friends} />
-          <MergePanel />
-          <StatsPanel />
-          {!isTrial && <FriendLinksPanel friends={friends} onCreate={createFriend} />}
-          <StateDebugView />
-        </div>
+        <>
+          <SceneCanvas />
+          <div className="grid">
+            <TreasurePanel />
+            <VaultPanel />
+            <TaskComposer />
+            <RewardComposer friends={friends} />
+            <MergePanel />
+            <StatsPanel />
+            {!isTrial && <FriendLinksPanel friends={friends} onCreate={createFriend} />}
+            <StateDebugView />
+          </div>
+        </>
       )}
     </div>
   )

@@ -8,6 +8,7 @@ import type {
   GameState,
   OpenResult,
   Receptacle,
+  ReceptacleRarity,
   Stocks,
   Treasure,
 } from '../types'
@@ -18,6 +19,17 @@ export interface GameEvent {
   kind: 'success' | 'error'
   message: string
 }
+
+/**
+ * Something for the 3D scene to animate. Counts come from the server response
+ * — the canvas replays what actually happened rather than rolling its own.
+ */
+export type FxPayload =
+  | { kind: 'harmony'; bursts: number }
+  | { kind: 'drop'; slot: number; rarity: ReceptacleRarity }
+  | { kind: 'open' }
+
+export type FxEvent = FxPayload & { id: number }
 
 export interface GameStore {
   coins: number
@@ -30,10 +42,14 @@ export interface GameStore {
   error: string | null
   hydrated: boolean
   events: GameEvent[]
+  fx: FxEvent[]
+  selectedTreasureId: string | null
 
   hydrate: () => Promise<void>
   reset: () => void
   dismissEvent: (id: number) => void
+  consumeFx: (id: number) => void
+  selectTreasure: (id: string | null) => void
 
   // Deltas applied from mutating calls, instead of refetching the world.
   patchCoins: (coins: number) => void
@@ -49,6 +65,9 @@ export interface GameStore {
   mergeHarmony: (rarity: CollectableRarity) => Promise<boolean>
   combine: (a: Element, b: Element, rarity: CollectableRarity) => Promise<boolean>
   sell: (element: Element, rarity: CollectableRarity, count: number) => Promise<boolean>
+  buyTreasure: (id: string) => Promise<boolean>
+  discardTreasure: (id: string) => Promise<boolean>
+  openReceptacle: (id: string) => Promise<boolean>
 }
 
 const emptyState = {
@@ -61,6 +80,8 @@ const emptyState = {
   error: null,
   hydrated: false,
   events: [] as GameEvent[],
+  fx: [] as FxEvent[],
+  selectedTreasureId: null,
 }
 
 let nextEventId = 1
@@ -73,6 +94,10 @@ export const useGameStore = create<GameStore>((set, get) => {
   function report(kind: GameEvent['kind'], message: string) {
     const event = { id: nextEventId++, kind, message }
     set({ events: [...get().events, event].slice(-4) })
+  }
+
+  function emitFx(payload: FxPayload) {
+    set({ fx: [...get().fx, { ...payload, id: nextEventId++ }] })
   }
 
   return {
@@ -99,6 +124,10 @@ export const useGameStore = create<GameStore>((set, get) => {
     reset: () => set({ ...emptyState }),
 
     dismissEvent: (id) => set({ events: get().events.filter((e) => e.id !== id) }),
+
+    consumeFx: (id) => set({ fx: get().fx.filter((e) => e.id !== id) }),
+
+    selectTreasure: (id) => set({ selectedTreasureId: id }),
 
     patchCoins: (coins) => set({ coins }),
 
@@ -180,6 +209,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       try {
         const result = await api.harmony(rarity)
         set({ stocks: result.stocks })
+        // The base five plus however many extras the server actually rolled.
+        emitFx({ kind: 'harmony', bursts: result.extras + 1 })
         report(
           'success',
           result.extras > 0
@@ -214,6 +245,58 @@ export const useGameStore = create<GameStore>((set, get) => {
         return true
       } catch (error) {
         report('error', describe(error, 'Could not sell those.'))
+        return false
+      }
+    },
+
+    buyTreasure: async (id) => {
+      const slot = get().treasures.find((t) => t.id === id)?.slot ?? 0
+      try {
+        const result = await api.buyTreasure(id)
+        get().applyBuyResult(result)
+        emitFx({ kind: 'drop', slot, rarity: result.dropped_rarity })
+        // Contents, price and pity all moved; and an emptied treasure was replaced.
+        await get().refreshTreasures()
+        if (result.treasure_gone) set({ selectedTreasureId: null })
+        report(
+          'success',
+          result.was_pity
+            ? `Pity paid out: a ${result.dropped_rarity.toLowerCase()}!`
+            : `Opened for ${result.price_paid} — a ${result.dropped_rarity.toLowerCase()}.`,
+        )
+        return true
+      } catch (error) {
+        report('error', describe(error, 'Could not buy from that treasure.'))
+        return false
+      }
+    },
+
+    discardTreasure: async (id) => {
+      try {
+        await api.discardTreasure(id)
+        set({ selectedTreasureId: null })
+        // Its receptacles went back to the pool and a new treasure took the slot.
+        await Promise.all([get().refreshTreasures(), get().hydrate()])
+        report('success', 'Treasure let go. A new one takes its place.')
+        return true
+      } catch (error) {
+        report('error', describe(error, 'Could not let that treasure go.'))
+        return false
+      }
+    },
+
+    openReceptacle: async (id) => {
+      try {
+        const result = await api.openReceptacle(id)
+        get().applyOpenResult(result)
+        emitFx({ kind: 'open' })
+        // The key was spent.
+        const { stocks } = await api.collectables()
+        set({ stocks })
+        report('success', `Opened — ${result.coins_gained} coins inside.`)
+        return true
+      } catch (error) {
+        report('error', describe(error, 'Could not open that.'))
         return false
       }
     },

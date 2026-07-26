@@ -399,3 +399,44 @@ button.mini.sell:hover:not(:disabled) {
   border-color: #7a3636;
   color: #f2a5a5;
 }
+
+/* --- 3d scene --- */
+
+.scene {
+  height: 22rem;
+  margin-top: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: radial-gradient(ellipse at 50% 35%, #1e2233 0%, var(--bg) 70%);
+  overflow: hidden;
+}
+
+.scene canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* --- vault --- */
+
+.vault {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.vault-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  background: var(--bg);
+}
+
+.bar-fill.ready {
+  background: #d4af37;
+}
