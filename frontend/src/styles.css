@@ -169,3 +169,233 @@ details summary {
   color: var(--muted);
   margin-top: 1.5rem;
 }
+
+/* --- layout --- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem 1.1rem 1.25rem;
+}
+
+.panel h2 {
+  margin: 0 0 0.35rem;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.6rem;
+}
+
+textarea,
+select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
+  padding: 0.5rem 0.7rem;
+  width: 100%;
+  resize: vertical;
+}
+
+form > button {
+  margin-top: 0.6rem;
+}
+
+/* Spoiler-safe paste: the owner must not read a friend's gift. */
+.masked {
+  -webkit-text-security: disc;
+}
+
+@supports not (-webkit-text-security: disc) {
+  .masked {
+    filter: blur(5px);
+  }
+}
+
+/* --- tabs --- */
+
+.tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+
+.tab {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+/* --- inventory --- */
+
+.inventory {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.inventory th,
+.inventory td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem 0.3rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.inventory thead th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.count {
+  display: inline-block;
+  min-width: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.count.zero {
+  color: var(--muted);
+  opacity: 0.4;
+}
+
+button.mini {
+  padding: 0.05rem 0.3rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  margin-left: 0.15rem;
+  background: var(--line);
+  color: var(--text);
+}
+
+button.mini:hover:not(:disabled) {
+  background: var(--accent);
+}
+
+button.mini.sell:hover:not(:disabled) {
+  background: #b8912f;
+}
+
+/* --- stats bars --- */
+
+.bars {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.bars li {
+  display: grid;
+  grid-template-columns: 6rem 1fr 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.bar-track {
+  background: var(--bg);
+  border-radius: 999px;
+  height: 0.5rem;
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* --- friend links --- */
+
+.links {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.links li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.links code {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  overflow-x: auto;
+}
+
+/* --- toasts --- */
+
+.toasts {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.toast {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.88rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.toast.success {
+  border-color: #3c6b4a;
+}
+
+.toast.error {
+  border-color: #7a3636;
+  color: #f2a5a5;
+}

@@ -1,19 +1,43 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
+import { api } from './api'
+import { EventToasts } from './components/EventToasts'
+import { FriendLinksPanel } from './components/FriendLinksPanel'
 import { LoginGate } from './components/LoginGate'
+import { MergePanel } from './components/MergePanel'
+import { RewardComposer } from './components/RewardComposer'
 import { StateDebugView } from './components/StateDebugView'
+import { StatsPanel } from './components/StatsPanel'
+import { TaskComposer } from './components/TaskComposer'
 import { WalletBadge } from './components/WalletBadge'
 import { useSessionStore } from './state/session'
 import { useGameStore } from './state/store'
+import type { FriendLink } from './types'
 
 function GameShell() {
   const isTrial = useSessionStore((s) => s.isTrial)
   const logout = useSessionStore((s) => s.logout)
   const { hydrate, reset, hydrated, loading, error } = useGameStore()
+  const [friends, setFriends] = useState<FriendLink[]>([])
 
   useEffect(() => {
     void hydrate()
   }, [hydrate])
+
+  useEffect(() => {
+    // Friend links are owner-only; a trial simply has none to manage.
+    if (isTrial) return
+    void api
+      .listFriends()
+      .then(({ friends: list }) => setFriends(list))
+      .catch(() => setFriends([]))
+  }, [isTrial])
+
+  const createFriend = useCallback(async (name: string) => {
+    const link = await api.createFriend(name)
+    setFriends((current) => [...current, link])
+    return link
+  }, [])
 
   async function onSignOut() {
     await logout()
@@ -33,9 +57,21 @@ function GameShell() {
         </div>
       </header>
 
+      <EventToasts />
+
       {error && <p role="alert" className="error">{error}</p>}
       {loading && !hydrated && <p className="muted">Loading your world…</p>}
-      {hydrated && <StateDebugView />}
+
+      {hydrated && (
+        <div className="grid">
+          <TaskComposer />
+          <RewardComposer friends={friends} />
+          <MergePanel />
+          <StatsPanel />
+          {!isTrial && <FriendLinksPanel friends={friends} onCreate={createFriend} />}
+          <StateDebugView />
+        </div>
+      )}
     </div>
   )
 }
