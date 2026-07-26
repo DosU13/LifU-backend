@@ -1,5 +1,16 @@
+import os
 from dataclasses import dataclass
 
+from repos.firebase import (
+    FirebaseCollectableRepository,
+    FirebaseFriendLinkRepository,
+    FirebaseMetaRepository,
+    FirebaseReceptacleRepository,
+    FirebaseTaskRepository,
+    FirebaseTreasureRepository,
+    FirebaseWalletRepository,
+    get_firestore_client,
+)
 from repos.interfaces import (
     CollectableRepository,
     FriendLinkRepository,
@@ -44,7 +55,17 @@ def build_repos(backend: str) -> RepoBundle:
             meta=MemoryMetaRepository(),
         )
     if backend == "firebase":
-        raise NotImplementedError(
-            "firebase backend lands in Phase 4 — use REPO_BACKEND=memory until then"
+        credentials_path = os.environ.get("FIREBASE_CREDENTIALS", "")
+        if not credentials_path:
+            raise RuntimeError("FIREBASE_CREDENTIALS must be set to use the firebase backend")
+        db = get_firestore_client(credentials_path)
+        return RepoBundle(
+            tasks=FirebaseTaskRepository(db),
+            collectables=FirebaseCollectableRepository(db),
+            wallet=FirebaseWalletRepository(db),
+            receptacles=FirebaseReceptacleRepository(db),
+            treasures=FirebaseTreasureRepository(db),
+            friend_links=FirebaseFriendLinkRepository(db),
+            meta=FirebaseMetaRepository(db),
         )
     raise ValueError(f"unknown REPO_BACKEND: {backend!r}")
