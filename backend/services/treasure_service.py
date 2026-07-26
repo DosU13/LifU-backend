@@ -90,14 +90,19 @@ class TreasureService:
         return [self._receptacles.get(rid) for rid in treasure.receptacle_ids]
 
     def price(self, treasure: Treasure) -> int:
-        """Average value of what the treasure still holds (ARCHITECTURE §7.6).
+        """The treasure's fixed price, set when it was generated (ARCHITECTURE §7.6).
 
-        Recomputed on every read, so the price falls as the treasure empties.
+        Deliberately *not* recomputed from current contents: buying must not
+        get cheaper as the treasure empties.
         """
-        values = [r.value for r in self.contents(treasure)]
-        if not values:
+        return treasure.price
+
+    @staticmethod
+    def _initial_price(receptacles: list[Receptacle]) -> int:
+        """Average value of the treasure's starting contents."""
+        if not receptacles:
             return 1
-        return max(1, math.ceil(sum(values) / len(values)))
+        return max(1, math.ceil(sum(r.value for r in receptacles) / len(receptacles)))
 
     # --- generation ---
 
@@ -128,6 +133,7 @@ class TreasureService:
             receptacle_ids=[r.id for r in drawn],
             pity=dict.fromkeys(PITY_THRESHOLDS, 0),
             created_at=self._now(),
+            price=self._initial_price(drawn),
         )
         self._treasures.save(treasure)
 

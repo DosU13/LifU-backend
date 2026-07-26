@@ -105,6 +105,7 @@ def _treasure_with(service, receptacles, treasures, specs: list[tuple[int, Recep
         receptacle_ids=ids,
         pity=dict.fromkeys(PITY_THRESHOLDS, 0),
         created_at=NOW,
+        price=TreasureService._initial_price([receptacles.get(i) for i in ids]),
     )
     for rid in ids:
         r = receptacles.get(rid)
@@ -186,25 +187,38 @@ def test_receptacle_belongs_to_only_one_treasure():
 # --- price ---
 
 
-def test_price_is_ceiling_of_mean_value():
+def test_price_is_ceiling_of_mean_value_at_generation():
     service, receptacles, treasures, _, _ = _build()
     treasure = _treasure_with(service, receptacles, treasures, [(10, CHEST), (21, SAFE)])
 
     assert service.price(treasure) == 16  # ceil(15.5)
 
 
-def test_price_recomputed_as_treasure_empties():
+def test_price_is_fixed_and_does_not_drop_as_the_treasure_empties():
+    """Buying must not get cheaper as receptacles leave the treasure."""
     # sanctum/vault/safe rolls miss, chest roll hits
     rng = _ScriptedRng(randoms=[0.9, 0.9, 0.9, 0.0])
     service, receptacles, treasures, _, _ = _build(rng=rng)
     treasure = _treasure_with(service, receptacles, treasures, [(10, CHEST), (100, CHEST)])
-    assert service.price(treasure) == 55
+    assert service.price(treasure) == 55  # ceil(mean(10, 100))
 
-    service.buy(treasure.id)
+    result = service.buy(treasure.id)
     remaining = service._get_treasure(treasure.id)
 
+    assert result.price_paid == 55
     assert len(remaining.receptacle_ids) == 1
-    assert service.price(remaining) in (10, 100)  # now just the survivor's value
+    assert service.price(remaining) == 55  # unchanged despite only one receptacle left
+
+
+def test_generate_fixes_price_from_starting_contents():
+    service, receptacles, treasures, _, _ = _build(rng=_ScriptedRng(randints=[5]))
+    for value in (10, 20, 30, 40, 50):
+        receptacles.add(_receptacle(value, CHEST))
+
+    treasure = service.generate(slot=0)
+
+    assert treasure.price == 30  # ceil(mean(10..50))
+    assert treasures.get_all()[0].price == 30  # persisted, not derived on read
 
 
 # --- buy: roll order and fall-through ---

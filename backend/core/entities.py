@@ -55,6 +55,9 @@ class Treasure:
     receptacle_ids: list[str]
     pity: dict[ReceptacleRarity, int]
     created_at: datetime
+    # Fixed at generation from the treasure's starting contents. Never changes
+    # for this treasure's lifetime, so emptying it does not make it cheaper.
+    price: int = 1
 
 
 @dataclass

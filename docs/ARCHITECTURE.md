@@ -297,7 +297,7 @@ Secret entry UX: owner pastes the friend's message into a masked textarea ("spoi
 
 **generate(slot):** draw size `k = rng.randint(5, 10)` clamped to pool size (pool = IN_POOL receptacles; if pool empty, slot stays empty/"waiting" and refills automatically on next reward submission). "Desirably random rarities": group pool by current rarity, shuffle each group, then round-robin across shuffled group order taking one per group until `k` drawn. Set drawn receptacles IN_TREASURE. Pity counters start at 0.
 
-**price(treasure)** = `max(1, ceil(mean(value of its current receptacles)))` — recomputed on every read; shrinks/shifts as contents drop and as recalc changes nothing (values are fixed; only membership changes it).
+**price(treasure)** = `max(1, ceil(mean(value of its *starting* receptacles)))`, computed once in `generate()` and stored on the Treasure. **Fixed for the treasure's lifetime** — it does not fall as receptacles drop out, so emptying a treasure never makes the remaining pulls cheaper. A new treasure (including one that replaces an emptied or discarded slot) gets its own price from its own starting contents.
 
 **buy(treasure_id):**
 ```

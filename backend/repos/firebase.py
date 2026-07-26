@@ -136,6 +136,7 @@ def _treasure_to_doc(t: Treasure) -> dict:
         "receptacle_ids": list(t.receptacle_ids),
         "pity": {k.name: v for k, v in t.pity.items()},
         "created_at": t.created_at,
+        "price": t.price,
     }
 
 
@@ -146,6 +147,7 @@ def _doc_to_treasure(doc_id: str, data: dict) -> Treasure:
         receptacle_ids=list(data.get("receptacle_ids", [])),
         pity={ReceptacleRarity[k]: v for k, v in data.get("pity", {}).items()},
         created_at=data["created_at"],
+        price=data.get("price", 1),
     )
 
 
