@@ -1,18 +1,29 @@
+from datetime import datetime, timezone
+
 import pytest
 
 from aiclients.fake import FakeAIClient
-from core.enums import ReceptacleRarity, ReceptacleState, Virtue
-from core.errors import AIResponseInvalid
+from core.entities import Receptacle
+from core.enums import CollectableRarity, Element, ReceptacleRarity, ReceptacleState, Virtue
+from core.errors import AIResponseInvalid, DomainError, MissingKey
 from core.rng import SeededRng
-from repos.memory import MemoryReceptacleRepository
+from repos.memory import (
+    MemoryCollectableRepository,
+    MemoryReceptacleRepository,
+    MemoryWalletRepository,
+)
 from services.rarity_service import RarityService
 from services.reward_service import RewardService
 
 
 def _make_service(responses, rng=None):
     repo = MemoryReceptacleRepository()
+    collectables = MemoryCollectableRepository()
+    wallet = MemoryWalletRepository()
     service = RewardService(
         receptacles=repo,
+        collectables=collectables,
+        wallet=wallet,
         rarity=RarityService(repo),
         ai=FakeAIClient(responses),
         rng=rng or SeededRng(1),
@@ -86,6 +97,129 @@ def test_submit_reward_ai_failure_persists_nothing():
         service.submit_reward("text")
 
     assert repo.list_non_generated() == []
+
+
+def _drop(repo, receptacle_id):
+    receptacle = repo.get(receptacle_id)
+    receptacle.state = ReceptacleState.DROPPED
+    repo.update(receptacle)
+    return receptacle
+
+
+def test_open_consumes_the_matching_key_and_pays_coins():
+    """A Safe of Serenity opens with exactly one Ocean Essence."""
+    repo = MemoryReceptacleRepository()
+    collectables = MemoryCollectableRepository()
+    wallet = MemoryWalletRepository()
+    service = RewardService(
+        receptacles=repo,
+        collectables=collectables,
+        wallet=wallet,
+        rarity=RarityService(repo),
+        ai=FakeAIClient(
+            [{"Value": 60, "Class": ["Serenity"]}, {"Value": 10, "Class": ["Freedom"]}]
+        ),
+        rng=SeededRng(1),
+    )
+    created = service.submit_reward("nice dinner")
+    service.submit_reward("filler")  # apportion(2) -> the first is the Safe
+    assert repo.get(created.id).rarity is ReceptacleRarity.SAFE
+    _drop(repo, created.id)
+    collectables.adjust({(Element.OCEAN, CollectableRarity.ESSENCE): 1})
+
+    opened, coins_gained, coins = service.open_receptacle(created.id)
+
+    assert opened.state is ReceptacleState.OPENED
+    assert opened.opened_at is not None
+    assert coins_gained == 60
+    assert coins == 60
+    assert wallet.get_coins() == 60
+    assert collectables.get_all()[(Element.OCEAN, CollectableRarity.ESSENCE)] == 0
+
+
+def test_open_without_the_key_raises_missing_key_and_changes_nothing():
+    repo = MemoryReceptacleRepository()
+    collectables = MemoryCollectableRepository()
+    wallet = MemoryWalletRepository()
+    service = RewardService(
+        receptacles=repo,
+        collectables=collectables,
+        wallet=wallet,
+        rarity=RarityService(repo),
+        ai=FakeAIClient([{"Value": 30, "Class": ["Serenity"]}]),
+        rng=SeededRng(1),
+    )
+    created = service.submit_reward("reward")
+    _drop(repo, created.id)
+
+    with pytest.raises(MissingKey) as excinfo:
+        service.open_receptacle(created.id)
+
+    assert excinfo.value.element is Element.OCEAN
+    assert excinfo.value.rarity is CollectableRarity.CRYSTAL  # lone receptacle -> Chest
+    assert repo.get(created.id).state is ReceptacleState.DROPPED
+    assert wallet.get_coins() == 0
+
+
+def test_open_rejects_receptacle_that_is_not_dropped():
+    repo = MemoryReceptacleRepository()
+    collectables = MemoryCollectableRepository()
+    service = RewardService(
+        receptacles=repo,
+        collectables=collectables,
+        wallet=MemoryWalletRepository(),
+        rarity=RarityService(repo),
+        ai=FakeAIClient([{"Value": 30, "Class": ["Serenity"]}]),
+        rng=SeededRng(1),
+    )
+    created = service.submit_reward("reward")  # still IN_POOL
+    collectables.adjust({(Element.OCEAN, CollectableRarity.CRYSTAL): 1})
+
+    with pytest.raises(DomainError):
+        service.open_receptacle(created.id)
+
+    # the key must not have been spent
+    assert collectables.get_all()[(Element.OCEAN, CollectableRarity.CRYSTAL)] == 1
+
+
+def test_opened_receptacle_keeps_its_rarity_frozen_afterwards():
+    repo = MemoryReceptacleRepository()
+    collectables = MemoryCollectableRepository()
+    service = RewardService(
+        receptacles=repo,
+        collectables=collectables,
+        wallet=MemoryWalletRepository(),
+        rarity=RarityService(repo),
+        ai=FakeAIClient([{"Value": 5, "Class": ["Serenity"]}]),
+        rng=SeededRng(1),
+    )
+    created = service.submit_reward("small reward")
+    _drop(repo, created.id)
+    collectables.adjust({(Element.OCEAN, CollectableRarity.CRYSTAL): 1})
+    service.open_receptacle(created.id)
+
+    # add many higher-value receptacles; the opened one must keep its Chest rarity
+    rarity_service = RarityService(repo)
+    for value in range(100, 60, -1):
+        repo.add(
+            Receptacle(
+                id="",
+                state=ReceptacleState.IN_POOL,
+                virtue=Virtue.SERENITY,
+                rarity=ReceptacleRarity.CHEST,
+                value=value,
+                is_generated=False,
+                is_secret=False,
+                friend_name=None,
+                reward_text="x",
+                content=None,
+                treasure_id=None,
+                created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            )
+        )
+    rarity_service.recalculate()
+
+    assert repo.get(created.id).rarity is ReceptacleRarity.CHEST
 
 
 def test_list_by_state_filters():

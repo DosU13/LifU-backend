@@ -6,6 +6,8 @@ from aiclients.base import AIClient
 from aiclients.groq_client import GroqClient
 from aiclients.random_client import RandomAIClient
 from core.rng import Rng, SystemRng
+from providers.base import ContentProvider
+from providers.fallback import FallbackContentProvider
 from repos.factory import RepoBundle, build_repos
 from services.economy_service import EconomyService
 from services.merger_service import MergerService
@@ -13,6 +15,7 @@ from services.rarity_service import RarityService
 from services.reward_service import RewardService
 from services.stats_service import StatsService
 from services.task_service import TaskService
+from services.treasure_service import TreasureService
 
 
 @lru_cache(maxsize=1)
@@ -60,9 +63,31 @@ def get_rarity_service() -> RarityService:
 
 
 def get_reward_service() -> RewardService:
+    repos = get_repos()
     return RewardService(
-        receptacles=get_repos().receptacles,
+        receptacles=repos.receptacles,
+        collectables=repos.collectables,
+        wallet=repos.wallet,
         rarity=get_rarity_service(),
         ai=get_ai_client(),
         rng=get_rng(),
+    )
+
+
+@lru_cache(maxsize=1)
+def get_content_provider() -> ContentProvider:
+    return FallbackContentProvider(rng=get_rng())
+
+
+def get_treasure_service() -> TreasureService:
+    repos = get_repos()
+    return TreasureService(
+        treasures=repos.treasures,
+        receptacles=repos.receptacles,
+        wallet=repos.wallet,
+        meta=repos.meta,
+        rarity=get_rarity_service(),
+        content=get_content_provider(),
+        rng=get_rng(),
+        timezone_name=settings.TIME_ZONE,
     )
