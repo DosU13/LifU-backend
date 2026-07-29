@@ -101,7 +101,7 @@ frontend/
   src/scene/   the three.js canvas
   src/state/   Zustand store and session
   src/         typed API client and the HUD panels
-docs/          SPEC, ARCHITECTURE, PLAN, AI_PROMPTS
+docs/          SPEC, ARCHITECTURE, PLAN, AI_PROMPTS, ICON_PROMPTS
 ```
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) is the source of truth for the
