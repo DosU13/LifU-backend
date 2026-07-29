@@ -11,6 +11,8 @@ backend/secrets/
 # --- Python / Django (backend/) ---
 backend/.venv/
 backend/venv/
+# The icon generator has its own venv — ~5GB of CUDA wheels.
+tools/icongen/.venv/
 **/__pycache__/
 *.py[cod]
 *$py.class
@@ -35,6 +37,9 @@ frontend/*.tsbuildinfo
 npm-debug.log*
 yarn-error.log*
 frontend/coverage/
+# Full-resolution icon renders kept by postprocess.py --keep-raw. The finished
+# 256px icons alongside them are committed; these originals are ~150MB.
+frontend/public/icons/raw/
 
 # --- Editors / OS ---
 .idea/

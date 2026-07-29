@@ -1,0 +1,14 @@
+# Install torch first, from the CUDA index -- the PyPI wheel is CPU-only:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+# then:
+#   pip install -r requirements.txt
+
+diffusers>=0.32.0
+transformers>=4.45.0
+accelerate>=1.0.0
+gguf>=0.10.0          # GGUF-quantized transformer loading
+sentencepiece         # T5 tokenizer
+protobuf              # T5 tokenizer conversion
+pillow
+numpy
+scipy                 # connected-component labelling for the chroma key
