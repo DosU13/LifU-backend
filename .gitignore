@@ -13,6 +13,11 @@ backend/.venv/
 backend/venv/
 # The icon generator has its own venv — ~5GB of CUDA wheels.
 tools/icongen/.venv/
+# Cached T5 prompt embeddings — regenerable, ~650MB.
+tools/icongen/.embeddings/
+# Run logs and scratch previews from generating the icon set.
+tools/icongen/*.log
+tools/icongen/*_preview.png
 **/__pycache__/
 *.py[cod]
 *$py.class
