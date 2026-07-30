@@ -11,4 +11,6 @@ sentencepiece         # T5 tokenizer
 protobuf              # T5 tokenizer conversion
 pillow
 numpy
-scipy                 # connected-component labelling for the chroma key
+scipy                 # edge-band despill in postprocess.py
+rembg                 # trained background segmentation (isnet-general-use)
+onnxruntime           # runs rembg's segmentation model, CPU is fine

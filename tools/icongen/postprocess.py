@@ -1,12 +1,20 @@
-"""Turn the raw magenta-background renders into transparent, web-sized PNGs.
+"""Turn the raw renders into transparent, web-sized PNGs.
 
-Two things here are less obvious than they look:
+Originally this keyed out a flat magenta background by colour. That failed in
+practice: FLUX (especially the Q3 quant this card needs, see generate.py)
+does not reliably paint a flat solid background no matter how the prompt
+insists -- it tends toward a vignette, bleeds the subject's own colour into
+it, and adds a soft contact shadow the prompt explicitly asked it not to. A
+fixed colour threshold could not separate that shadow from real background
+without also eating into the object, since both land in the same colour
+neighbourhood.
 
-Background detection is by connectivity, not by colour. Space is #6c5cf5 and
-Inspiration's glow is bright violet -- both close enough to magenta that a
-plain colour key punches holes through the middle of the artwork. Instead the
-magenta mask is labelled into connected regions and only those touching the
-border are treated as background, so an interior violet highlight survives.
+Instead this uses rembg (a trained salient-object segmentation network,
+isnet-general-use) to find the object regardless of what the background
+actually turned out to be. Verified against both a first-draft render (a dark
+vignette background with a visible drop shadow) and a more insistent
+background prompt (a flat magenta field) -- rembg cut both cleanly, so the
+renders already on disk do not need to be regenerated.
 
 Framing is left alone. The size difference between a Fragment and a Core is
 deliberate art direction, so this never crops to the content bounding box --
@@ -24,67 +32,49 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageFilter
-from scipy import ndimage
+from rembg import new_session, remove
 
 DEFAULT_DIR = Path(__file__).resolve().parents[2] / "frontend" / "public" / "icons"
-MAGENTA = np.array([255, 0, 255], dtype=np.float32)
+MODEL = "isnet-general-use"
 
 
-def _background_mask(rgb: np.ndarray, tolerance: int) -> np.ndarray:
-    """Pixels that are magenta *and* reachable from the image border."""
-    distance = np.linalg.norm(rgb.astype(np.float32) - MAGENTA, axis=-1)
-    magenta_like = distance < tolerance
+def _despill(rgb: np.ndarray, alpha: np.ndarray) -> np.ndarray:
+    """Pull background-colour fringe out of a thin band around the cut edge.
 
-    labels, count = ndimage.label(magenta_like)
-    if count == 0:
-        return np.zeros(rgb.shape[:2], dtype=bool)
-
-    border = np.concatenate(
-        [labels[0, :], labels[-1, :], labels[:, 0], labels[:, -1]],
-    )
-    touching = set(border[border > 0].tolist())
-    if not touching:
-        return np.zeros(rgb.shape[:2], dtype=bool)
-
-    return np.isin(labels, list(touching))
-
-
-def _despill(rgb: np.ndarray, edge_band: np.ndarray) -> np.ndarray:
-    """Pull magenta fringe out of the cut edge only.
-
-    Restricted to a couple of pixels around the silhouette: applied globally it
-    would desaturate every legitimately warm object, and Fire is #f2643d.
+    Restricted to the edge only: applied globally it would desaturate every
+    legitimately warm object, and Fire is #f2643d.
     """
+    from scipy import ndimage
+
+    foreground = alpha > 16
+    grown = ndimage.binary_dilation(foreground, iterations=2)
+    shrunk = ndimage.binary_erosion(foreground, iterations=2)
+    edge_band = grown & ~shrunk
+
     out = rgb.astype(np.float32).copy()
     r, g, b = out[..., 0], out[..., 1], out[..., 2]
+    # Every background this pipeline has produced skews magenta/warm-dark, so
+    # the tell is green sitting well below red and blue.
     spill = np.minimum(r, b) - g
-    active = edge_band & (spill > 0)
-    correction = np.where(active, spill, 0.0)
+    correction = np.where(edge_band & (spill > 0), spill, 0.0)
     out[..., 0] -= correction
     out[..., 2] -= correction
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
-def process(path: Path, size: int, tolerance: int, raw_dir: Path | None) -> None:
-    image = Image.open(path).convert("RGB")
-    rgb = np.array(image)
-
-    background = _background_mask(rgb, tolerance)
-    foreground = ~background
-
-    # A 2px band straddling the silhouette, where magenta has bled into the art.
-    grown = ndimage.binary_dilation(foreground, iterations=2)
-    shrunk = ndimage.binary_erosion(foreground, iterations=2)
-    edge_band = grown & ~shrunk
-
-    rgb = _despill(rgb, edge_band)
-
-    alpha = (foreground * 255).astype(np.uint8)
-    alpha_image = Image.fromarray(alpha).filter(ImageFilter.GaussianBlur(0.6))
+def process(path: Path, session, size: int, raw_dir: Path | None) -> None:
+    original = Image.open(path).convert("RGB")
 
     if raw_dir is not None:
         raw_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, raw_dir / path.name)
+
+    cut = remove(original, session=session)  # RGBA
+    rgb = np.array(cut.convert("RGB"))
+    alpha = np.array(cut.getchannel("A"))
+
+    rgb = _despill(rgb, alpha)
+    alpha_image = Image.fromarray(alpha).filter(ImageFilter.GaussianBlur(0.5))
 
     out = Image.merge("RGBA", (*Image.fromarray(rgb).split(), alpha_image))
     out = out.resize((size, size), Image.LANCZOS)
@@ -95,12 +85,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dir", type=Path, default=DEFAULT_DIR)
     parser.add_argument("--size", type=int, default=256, help="output edge in px")
-    parser.add_argument(
-        "--tolerance",
-        type=int,
-        default=110,
-        help="how far from pure magenta still counts as background",
-    )
     parser.add_argument(
         "--keep-raw",
         action="store_true",
@@ -117,9 +101,12 @@ def main() -> int:
         print(f"no icons found under {args.dir}")
         return 1
 
+    print(f"[load] {MODEL} segmentation model", flush=True)
+    session = new_session(MODEL)
+
     for index, path in enumerate(paths, start=1):
         raw_dir = (args.dir / "raw" / path.parent.name) if args.keep_raw else None
-        process(path, args.size, args.tolerance, raw_dir)
+        process(path, session, args.size, raw_dir)
         print(f"[{index}/{len(paths)}] {path.parent.name}/{path.name}", flush=True)
 
     print(f"\nprocessed {len(paths)} icons to {args.size}px with transparency")

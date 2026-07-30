@@ -163,6 +163,54 @@ ELEMENT_HEX: dict[Element, str] = {
     Element.WIND: "#a8d8c0",
 }
 
+# Plain-English colour names for the CLIP prompt. CLIP gets 77 tokens and
+# cannot read a hex triplet, so it needs the colour said out loud; T5 gets the
+# exact value.
+ELEMENT_COLOR_WORD: dict[Element, str] = {
+    Element.SPACE: "deep violet",
+    Element.AIR: "pale sky blue",
+    Element.FIRE: "ember orange",
+    Element.WATER: "deep blue",
+    Element.EARTH: "moss green and brown",
+    Element.HARMONY: "warm gold and white",
+    Element.GROWTH: "living green",
+    Element.FORGE: "molten copper orange",
+    Element.DUST: "pale tan",
+    Element.MOUNTAIN: "grey stone",
+    Element.STEAM: "pale blue-white",
+    Element.MIST: "soft grey-blue",
+    Element.OCEAN: "deep teal",
+    Element.LIGHTNING: "electric yellow",
+    Element.SUN: "amber gold",
+    Element.WIND: "pale mint green",
+}
+
+# Short tier phrases for the CLIP prompt — the same ladder compressed to the
+# few words that actually survive a 77-token window.
+COLLECTABLE_SHORT: dict[CollectableRarity, str] = {
+    CollectableRarity.FRAGMENT: "a small dull rough chipped mineral scrap, matte, no glow",
+    CollectableRarity.SHARD: "a cleaved translucent splinter with flat facets, faint sheen",
+    CollectableRarity.CRYSTAL: "a cut faceted gemstone glowing softly, thin metal band",
+    CollectableRarity.ESSENCE: "a glowing teardrop of swirling liquid light in an ornate setting",
+    CollectableRarity.SOUL: "a blazing cracked orb with floating shards in orbit, radiant aura",
+    CollectableRarity.CORE: (
+        "a brilliant contained star with concentric glowing rings and orbiting debris, "
+        "blindingly radiant"
+    ),
+}
+
+RECEPTACLE_SHORT: dict[ReceptacleRarity, str] = {
+    ReceptacleRarity.POUCH: "a small worn cloth drawstring pouch, humble",
+    ReceptacleRarity.SACK: "a burlap sack tied with leather cord, light leaking out",
+    ReceptacleRarity.CHEST: "a wooden chest with iron bands and a glowing keyhole",
+    ReceptacleRarity.SAFE: "a brushed steel strongbox with a glowing circular lock",
+    ReceptacleRarity.VAULT: "a massive gold and dark metal vault door, glowing seams",
+    ReceptacleRarity.SANCTUM: (
+        "an ornate floating reliquary shrine with hovering rings and a blinding "
+        "seam of light"
+    ),
+}
+
 ELEMENT_MOTIF: dict[Element, str] = {
     Element.SPACE: "deep violet void with a faint star field visible inside the material",
     Element.AIR: "pale sky blue and weightless, with visible currents flowing through it",
@@ -207,6 +255,16 @@ class IconJob:
     """"collectables" or "receptacles" — the output subdirectory."""
 
     prompt: str
+    """The full description, for T5."""
+
+    clip_prompt: str
+    """A short subject-first summary, for CLIP.
+
+    FLUX conditions on both encoders. CLIP only sees 77 tokens, so handing it
+    the full prompt truncates mid-boilerplate and it never learns what the
+    object even is. This says the subject, the tier and the colour first.
+    """
+
     seed: int
 
     @property
@@ -233,6 +291,25 @@ def collectable_prompt(element: Element, rarity: CollectableRarity) -> str:
     return " ".join([STYLE, subject, COLLECTABLE_LADDER[rarity], OUTPUT])
 
 
+def collectable_clip_prompt(element: Element, rarity: CollectableRarity) -> str:
+    return (
+        f"{element.value.lower()} {rarity.name.lower()}, "
+        f"{COLLECTABLE_SHORT[rarity]}, {ELEMENT_COLOR_WORD[element]}, "
+        "fantasy game inventory icon, painted 3D render, centred on a flat magenta "
+        "background"
+    )
+
+
+def receptacle_clip_prompt(virtue: Virtue, rarity: ReceptacleRarity) -> str:
+    key_element = VIRTUE_ELEMENT[virtue]
+    return (
+        f"{rarity.name.lower()} of {virtue.value.lower()}, "
+        f"{RECEPTACLE_SHORT[rarity]}, glowing {ELEMENT_COLOR_WORD[key_element]} lock, "
+        "fantasy game inventory icon, painted 3D render, centred on a flat magenta "
+        "background"
+    )
+
+
 def receptacle_prompt(virtue: Virtue, rarity: ReceptacleRarity) -> str:
     key_element = VIRTUE_ELEMENT[virtue]
     subject = (
@@ -256,6 +333,7 @@ def all_jobs() -> list[IconJob]:
                     name=f"{element.value.lower()}_{rarity.name.lower()}",
                     category="collectables",
                     prompt=collectable_prompt(element, rarity),
+                    clip_prompt=collectable_clip_prompt(element, rarity),
                     seed=seed,
                 )
             )
@@ -268,6 +346,7 @@ def all_jobs() -> list[IconJob]:
                     name=f"{virtue.value.lower()}_{rarity.name.lower()}",
                     category="receptacles",
                     prompt=receptacle_prompt(virtue, rarity),
+                    clip_prompt=receptacle_clip_prompt(virtue, rarity),
                     seed=seed,
                 )
             )
