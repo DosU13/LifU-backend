@@ -29,6 +29,16 @@ from repos.memory import (
     MemoryTreasureRepository,
     MemoryWalletRepository,
 )
+from repos.sqlite import (
+    SQLiteCollectableRepository,
+    SQLiteDatabase,
+    SQLiteFriendLinkRepository,
+    SQLiteMetaRepository,
+    SQLiteReceptacleRepository,
+    SQLiteTaskRepository,
+    SQLiteTreasureRepository,
+    SQLiteWalletRepository,
+)
 
 
 @dataclass
@@ -53,6 +63,17 @@ def build_repos(backend: str) -> RepoBundle:
             treasures=MemoryTreasureRepository(),
             friend_links=MemoryFriendLinkRepository(),
             meta=MemoryMetaRepository(),
+        )
+    if backend == "sqlite":
+        db = SQLiteDatabase(os.environ.get("SQLITE_PATH", "data/lifu.db"))
+        return RepoBundle(
+            tasks=SQLiteTaskRepository(db),
+            collectables=SQLiteCollectableRepository(db),
+            wallet=SQLiteWalletRepository(db),
+            receptacles=SQLiteReceptacleRepository(db),
+            treasures=SQLiteTreasureRepository(db),
+            friend_links=SQLiteFriendLinkRepository(db),
+            meta=SQLiteMetaRepository(db),
         )
     if backend == "firebase":
         credentials_path = os.environ.get("FIREBASE_CREDENTIALS", "")

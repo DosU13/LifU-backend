@@ -188,7 +188,13 @@ Tasks award **fragments only, no coins**. Coins come from (a) opening receptacle
 
 ## 6. Repository interfaces (`repos/interfaces.py`)
 
-All abstract (ABC). Firebase impls in `repos/firebase.py` (Firestore via `firebase-admin`; counters and wallet mutations inside Firestore transactions). Memory impls in `repos/memory.py` (plain dicts; used by trial mode and all unit tests).
+All abstract (ABC). Three implementations, all held to the same contract test suite in `tests/repos/contracts.py`:
+
+- **`repos/sqlite.py`** — the default for real play (`REPO_BACKEND=sqlite`). One local file; counters and wallet mutations inside `BEGIN IMMEDIATE` transactions. Chosen because the game has exactly one writer and Firestore round trips measured 450–1900ms from the owner's machine against ~70ms of network RTT, making a page load take ~9.7s across seven sequential trips. The same workload on SQLite measures ~0.2ms.
+- **`repos/memory.py`** — plain dicts; used by trial mode and all unit tests.
+- **`repos/firebase.py`** — Firestore via `firebase-admin`, mutations inside Firestore transactions. Kept working, and still the right choice if the backend is ever deployed into the same region as the database.
+
+Because everything above the repository layer depends only on these interfaces, swapping backends changes no service, view, or test outside `repos/`.
 
 ```python
 class TaskRepository(ABC):
@@ -430,4 +436,4 @@ App
 
 ## 11. Configuration (env)
 
-`OWNER_PASSWORD`, `DJANGO_SECRET_KEY`, `REPO_BACKEND` (firebase|memory), `FIREBASE_CREDENTIALS` (path to service-account JSON), `GROQ_API_KEY`, `GROQ_MODEL`, `TIMEZONE`, `DEVIANTART_CLIENT_ID/SECRET`, `JAMENDO_CLIENT_ID`, `CORS_ALLOWED_ORIGINS` (lifu.doslan.com). `.env.example` kept current; secrets never committed.
+`OWNER_PASSWORD`, `DJANGO_SECRET_KEY`, `REPO_BACKEND` (sqlite|memory|firebase), `SQLITE_PATH` (default `data/lifu.db`, gitignored — it is save data), `FIREBASE_CREDENTIALS` (path to service-account JSON), `GROQ_API_KEY`, `GROQ_MODEL`, `TIMEZONE`, `DEVIANTART_CLIENT_ID/SECRET`, `JAMENDO_CLIENT_ID`, `CORS_ALLOWED_ORIGINS` (lifu.doslan.com). `.env.example` kept current; secrets never committed.

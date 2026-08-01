@@ -38,9 +38,9 @@ cp .env.example .env
 ```
 
 Set `OWNER_PASSWORD` in `.env` — that is how you sign in. Everything else is
-optional: with `REPO_BACKEND=memory` (the default) the game runs entirely in
-memory, and with no `GROQ_API_KEY` it uses a random stand-in for the AI. That
-is enough to play with immediately.
+optional: `REPO_BACKEND=sqlite` (the default) keeps your game in a local file,
+and with no `GROQ_API_KEY` it uses a random stand-in for the AI. That is enough
+to play with immediately.
 
 ```bash
 ./.venv/Scripts/python.exe manage.py runserver
@@ -64,7 +64,7 @@ the session cookie is same-origin and there is no CORS to configure locally.
 | Variable | What it turns on |
 |---|---|
 | `GROQ_API_KEY` | Real task valuation and reward classification (free tier at console.groq.com) |
-| `REPO_BACKEND=firebase` + `FIREBASE_CREDENTIALS` | Persistent storage in Firestore |
+| `REPO_BACKEND` | `sqlite` (default, a local file at `SQLITE_PATH`), `memory` (nothing persists), or `firebase` (+ `FIREBASE_CREDENTIALS`) |
 | `DEVIANTART_*`, `JAMENDO_CLIENT_ID` | Extra sources for the surprises inside generated Pouches and Sacks |
 | `TIMEZONE` | Day boundary for streaks and the once-a-day discard. Must be an IANA name like `Asia/Almaty`, not `UTC+6` |
 | `CORS_ALLOWED_ORIGINS` | Only needed when the frontend is served from a different origin than the API |
@@ -92,7 +92,7 @@ themselves unless `FIREBASE_CREDENTIALS` / `GROQ_API_KEY` are set.
 ```
 backend/
   core/        pure domain: enums, mapping tables, constants, entities
-  repos/       repository interfaces + memory and Firestore implementations
+  repos/       repository interfaces + SQLite, memory and Firestore implementations
   services/    game rules: valuation, merging, rarity, treasures, rewards
   aiclients/   Groq client, random client, and the validation pipeline
   providers/   live content for generated Pouches and Sacks

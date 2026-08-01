@@ -13,7 +13,7 @@ Backend (run from `backend/`):
 - `python -m pytest tests/services/ -k rarity` — focused run example
 - `ruff check .` and `ruff format .` — lint + format (both clean before finishing)
 - `python manage.py runserver` — dev server; swagger UI at http://localhost:8000/api/docs
-- `REPO_BACKEND=memory python manage.py runserver` — run without Firebase credentials
+- `REPO_BACKEND=memory python manage.py runserver` — run with nothing persisted
 
 Frontend (run from `frontend/`):
 - `npm run dev` / `npm run build` / `npm test` (vitest) / `npm run lint` (eslint)
