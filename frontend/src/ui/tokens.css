@@ -1,0 +1,157 @@
+/* Design tokens and base styles for the Part II interface.
+   Values come from the agreed mockup; change them here, never per component. */
+
+:root {
+  /* surfaces */
+  --bg:        #0b0710;
+  --panel:     rgba(255, 255, 255, 0.045);
+  --panel-solid: #17101f;
+  --line:      rgba(255, 255, 255, 0.10);
+
+  /* text */
+  --text:      #f2ecf7;
+  --muted:     #9a8caa;
+  --faint:     #6d6079;
+
+  /* accents */
+  --gold:      #f5c14a;
+  --gold-deep: #d99a25;
+  --violet:    #8e6ff0;
+  --violet-deep: #6543c4;
+  --good:      #7fc99a;
+  --bad:       #e0574f;
+
+  --radius:    18px;
+  --radius-sm: 12px;
+
+  --serif: Georgia, "Times New Roman", serif;
+  --sans:  "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* The elimination and reveal sequences read as one language when their
+     beats are shared rather than hand-tuned per component. */
+  --beat-fast: 0.18s;
+  --beat:      0.35s;
+  --beat-slow: 0.78s;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 var(--sans);
+  overflow: hidden;
+}
+
+/* Ambient wash so the near-black never reads as an empty form page. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(70vw 60vh at 15% 0%,   rgba(150, 90, 240, 0.16), transparent 65%),
+    radial-gradient(60vw 55vh at 85% 100%, rgba(245, 160, 60, 0.12), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+h1, h2, h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+button:disabled { cursor: not-allowed; }
+
+input, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* --- shared surfaces --- */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  backdrop-filter: blur(14px);
+}
+
+/* --- shared buttons --- */
+
+.btn-primary {
+  background: linear-gradient(180deg, #f7cf6a, var(--gold-deep));
+  color: #2b1c02;
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 12px 26px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 26px -10px rgba(245, 193, 74, 0.75);
+  transition: transform 0.12s, box-shadow var(--beat), filter 0.2s;
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 14px 34px -10px rgba(245, 193, 74, 0.95);
+}
+.btn-primary:active:not(:disabled) { transform: translateY(2px); }
+.btn-primary:disabled { opacity: 0.35; box-shadow: none; }
+
+.btn-violet {
+  background: linear-gradient(180deg, var(--violet), var(--violet-deep));
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  padding: 13px 22px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 26px -12px rgba(142, 111, 240, 0.9);
+  transition: filter 0.2s, transform 0.12s;
+}
+.btn-violet:hover:not(:disabled) { filter: brightness(1.12); }
+.btn-violet:active:not(:disabled) { transform: translateY(2px); }
+.btn-violet:disabled { opacity: 0.35; box-shadow: none; }
+
+.btn-ghost {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--muted); }
+
+.label {
+  font-size: 11.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Motion is decoration here; anyone who has asked for less should get less. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

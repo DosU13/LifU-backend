@@ -477,3 +477,44 @@ button.mini.sell:hover:not(:disabled) {
   padding: 0.7rem;
   font-size: 1rem;
 }
+
+/* --- Part II shell (Phase 17) ---------------------------------------
+   Bridging styles while the old panels live inside the new snapping deck.
+   Phase 23 removes this block along with the panels themselves. */
+
+.centered-page {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+}
+
+/* Layout content is capped and allowed to scroll internally: a section that
+   grows past the viewport would fight the deck's snap. */
+.stack {
+  width: 100%;
+  max-width: 1080px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scrollbar-width: thin;
+}
+
+.admin-page {
+  position: relative;
+  z-index: 1;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 90px 32px 60px;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.back-link {
+  align-self: flex-start;
+  text-decoration: none;
+}

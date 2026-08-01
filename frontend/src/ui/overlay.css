@@ -1,0 +1,160 @@
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(6, 3, 10, 0.9);
+  backdrop-filter: blur(9px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.prize {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: prize-burst 0.55s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+@keyframes prize-burst {
+  0%   { transform: scale(0.25) rotate(-16deg); opacity: 0; }
+  70%  { transform: scale(1.12) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.prize img {
+  filter:
+    drop-shadow(0 0 44px rgba(245, 193, 74, 0.65))
+    drop-shadow(0 0 90px rgba(150, 90, 240, 0.4));
+  animation: prize-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes prize-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+.prize-amount {
+  font-family: var(--serif);
+  font-size: 46px;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.prize-title {
+  font-size: 15px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.prize-note {
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+/* Slow rotating shafts of light behind the prize. Purely decoration, so it is
+   hidden from assistive tech and stilled under reduced-motion. */
+.rays {
+  position: absolute;
+  width: 620px;
+  height: 620px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 8%, rgba(245, 193, 74, 0.16) 8% 10%,
+    transparent 10% 20%, rgba(245, 193, 74, 0.16) 20% 22%,
+    transparent 22% 33%, rgba(245, 193, 74, 0.16) 33% 35%,
+    transparent 35% 47%, rgba(245, 193, 74, 0.16) 47% 49%,
+    transparent 49% 60%, rgba(245, 193, 74, 0.16) 60% 62%,
+    transparent 62% 74%, rgba(245, 193, 74, 0.16) 74% 76%,
+    transparent 76%
+  );
+  animation: rays-turn 15s linear infinite;
+}
+
+@keyframes rays-turn { to { transform: rotate(360deg); } }
+
+.veil-actions {
+  display: flex;
+  gap: 12px;
+  z-index: 2;
+}
+
+.queue-dots {
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.queue-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.queue-dots i.on { background: var(--gold); }
+
+/* --- the inspect card, shown inside a Modal --- */
+
+.detail-card {
+  position: relative;
+  z-index: 2;
+  width: min(430px, calc(100vw - 48px));
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.95);
+  animation: prize-burst 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.detail-card > img {
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7));
+}
+
+.detail-card h2 { font-size: 25px; margin: 8px 0 2px; }
+
+.detail-card .desc {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--muted);
+  margin: 16px 0 20px;
+}
+
+.keyline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px;
+  border-radius: 13px;
+  font-size: 13.5px;
+  margin-bottom: 18px;
+}
+
+.keyline.have {
+  background: rgba(127, 201, 154, 0.1);
+  border: 1px solid rgba(127, 201, 154, 0.3);
+  color: #9fdcb4;
+}
+
+.keyline.need {
+  background: rgba(224, 87, 79, 0.08);
+  border: 1px solid rgba(224, 87, 79, 0.25);
+  color: #e2948e;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}

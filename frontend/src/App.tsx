@@ -7,35 +7,97 @@ import { FriendLinksPanel } from './components/FriendLinksPanel'
 import { LoginGate } from './components/LoginGate'
 import { MergePanel } from './components/MergePanel'
 import { RewardComposer } from './components/RewardComposer'
-import { StateDebugView } from './components/StateDebugView'
 import { StatsPanel } from './components/StatsPanel'
 import { TaskComposer } from './components/TaskComposer'
 import { TreasurePanel } from './components/TreasurePanel'
 import { VaultPanel } from './components/VaultPanel'
-import { WalletBadge } from './components/WalletBadge'
-import { SceneCanvas } from './scene/SceneCanvas'
+import { routeFromPath } from './routing'
 import { useSessionStore } from './state/session'
 import { useGameStore } from './state/store'
+import { Deck } from './ui/Deck'
+import { TopBar } from './ui/TopBar'
 import type { FriendLink } from './types'
 
+/**
+ * The root page. Three full-height layouts the deck snaps between.
+ *
+ * The sections currently hold the Part-I panels so the game stays fully
+ * playable while Part II is built out; phases 18-20 replace their contents
+ * one layout at a time, and Phase 23 deletes what is left over.
+ */
 function GameShell() {
-  const isTrial = useSessionStore((s) => s.isTrial)
-  const logout = useSessionStore((s) => s.logout)
-  const { hydrate, reset, hydrated, loading, error } = useGameStore()
-  const [friends, setFriends] = useState<FriendLink[]>([])
+  const { hydrate, hydrated, loading, error } = useGameStore()
 
   useEffect(() => {
     void hydrate()
   }, [hydrate])
 
+  if (error) {
+    return (
+      <div className="centered-page">
+        <p role="alert" className="error">{error}</p>
+      </div>
+    )
+  }
+
+  if (!hydrated) {
+    return (
+      <div className="centered-page">
+        <p className="muted">{loading ? 'Loading your world…' : ''}</p>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <TopBar />
+      <EventToasts />
+      <Deck
+        sections={[
+          {
+            id: 'ledger',
+            label: 'Log what you did',
+            node: (
+              <div className="stack">
+                <TaskComposer />
+              </div>
+            ),
+          },
+          {
+            id: 'vault',
+            label: 'Everything you own',
+            node: (
+              <div className="stack">
+                <VaultPanel />
+                <MergePanel />
+              </div>
+            ),
+          },
+          {
+            id: 'treasury',
+            label: 'Treasures',
+            node: (
+              <div className="stack">
+                <TreasurePanel />
+              </div>
+            ),
+          },
+        ]}
+      />
+    </>
+  )
+}
+
+/** Rewards management. Deliberately a separate page, not a fourth layout. */
+function AdminPage() {
+  const [friends, setFriends] = useState<FriendLink[]>([])
+
   useEffect(() => {
-    // Friend links are owner-only; a trial simply has none to manage.
-    if (isTrial) return
     void api
       .listFriends()
       .then(({ friends: list }) => setFriends(list))
       .catch(() => setFriends([]))
-  }, [isTrial])
+  }, [])
 
   const createFriend = useCallback(async (name: string) => {
     const link = await api.createFriend(name)
@@ -43,65 +105,39 @@ function GameShell() {
     return link
   }, [])
 
-  async function onSignOut() {
-    await logout()
-    reset()
-  }
-
   return (
-    <div className="shell">
-      <header>
-        <h1>LifU</h1>
-        <div className="header-right">
-          {isTrial && <span className="trial-badge">Trial — nothing is saved</span>}
-          <WalletBadge />
-          <button type="button" onClick={onSignOut}>
-            Sign out
-          </button>
-        </div>
-      </header>
-
+    <>
+      <TopBar showAdminLink={false} />
       <EventToasts />
-
-      {error && <p role="alert" className="error">{error}</p>}
-      {loading && !hydrated && <p className="muted">Loading your world…</p>}
-
-      {hydrated && (
-        <>
-          <SceneCanvas />
-          <div className="grid">
-            <TreasurePanel />
-            <VaultPanel />
-            <TaskComposer />
-            <RewardComposer friends={friends} />
-            <MergePanel />
-            <StatsPanel />
-            {!isTrial && <FriendLinksPanel friends={friends} onCreate={createFriend} />}
-            <StateDebugView />
-          </div>
-        </>
-      )}
-    </div>
+      <div className="admin-page">
+        <a className="pill back-link" href="/">
+          ← Back to the game
+        </a>
+        <RewardComposer friends={friends} />
+        <FriendLinksPanel friends={friends} onCreate={createFriend} />
+        <StatsPanel />
+      </div>
+    </>
   )
-}
-
-/** `/alex` is a friend's trial link; `/` is the owner's game. */
-function friendNameFromPath(): string | null {
-  const slug = window.location.pathname.replace(/^\/+|\/+$/g, '')
-  return /^[a-z0-9][a-z0-9_-]{0,30}$/.test(slug) ? slug : null
 }
 
 export function App() {
   const { authenticated, checking, check } = useSessionStore()
-  const [friendName] = useState(friendNameFromPath)
+  const [route] = useState(routeFromPath)
 
   useEffect(() => {
-    // A friend link never carries the owner's session; it starts from the gate.
-    if (friendName === null) void check()
-  }, [check, friendName])
+    // A friend link never carries the owner's session; it starts at the gate.
+    if (route.kind !== 'friend') void check()
+  }, [check, route.kind])
 
-  if (authenticated) return <GameShell />
-  if (friendName !== null) return <FriendGate friendName={friendName} />
-  if (checking) return <p className="muted centered">…</p>
-  return <LoginGate />
+  if (route.kind === 'friend' && !authenticated) {
+    return <FriendGate friendName={route.name} />
+  }
+
+  if (!authenticated) {
+    if (checking) return <p className="muted centered">…</p>
+    return <LoginGate />
+  }
+
+  return route.kind === 'admin' ? <AdminPage /> : <GameShell />
 }

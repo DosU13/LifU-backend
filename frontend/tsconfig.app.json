@@ -20,7 +20,9 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
-    "types": ["vitest/globals"]
+    // "node" is here for the tests only: the icon suite reads the real
+    // public/icons directory off disk to prove all 156 files exist.
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src"]
 }

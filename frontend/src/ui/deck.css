@@ -1,0 +1,104 @@
+.deck {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+.deck::-webkit-scrollbar { display: none; }
+
+.layout {
+  height: 100vh;
+  scroll-snap-align: start;
+  /* Without this a fast flick skips a layout, which breaks the whole
+     three-page illusion. */
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 78px 32px 40px;
+  gap: 20px;
+}
+
+.rail {
+  position: fixed;
+  right: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rail button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  transition: all 0.25s;
+}
+
+.rail button.on {
+  background: var(--gold);
+  box-shadow: 0 0 14px var(--gold);
+  transform: scale(1.35);
+}
+
+.topbar {
+  position: fixed;
+  top: 22px;
+  left: 30px;
+  right: 30px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* The bar spans the page so its children can sit at the far edges, but only
+     those children should intercept clicks. */
+  pointer-events: none;
+}
+
+.topbar > * { pointer-events: auto; }
+
+.brand {
+  font-family: var(--serif);
+  font-size: 19px;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--line);
+  padding: 8px 16px;
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.pill:hover { color: var(--text); border-color: rgba(245, 193, 74, 0.5); }
+
+.pill b {
+  font-size: 17px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pill.trial { color: #c9a6f5; border-color: rgba(180, 130, 245, 0.35); }
