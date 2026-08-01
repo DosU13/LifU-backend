@@ -105,7 +105,10 @@ export function TreasurePanel() {
         <button
           type="button"
           disabled={busy || !affordable}
-          onClick={() => void run(() => buyTreasure(selected.id))}
+          // buyTreasure resolves to the server's BuyResult now, which the
+          // Treasury layout animates; this superseded panel only needs to know
+          // whether it worked. Removed with the rest of Part I in Phase 23.
+          onClick={() => void run(async () => (await buyTreasure(selected.id)) !== null)}
         >
           {affordable ? `Try it — ◈ ${selected.price}` : `Need ◈ ${selected.price}`}
         </button>

@@ -1,0 +1,244 @@
+import { useEffect, useRef, useState } from 'react'
+
+import { label } from '../domain'
+import { useGameStore } from '../state/store'
+import { collectableIcon, receptacleIcon } from '../ui/Icon'
+import { Reveal } from '../ui/Overlay'
+import { useReveal } from '../ui/useReveal'
+import { planElimination } from './elimination'
+import type { Treasure, TreasureContentPreview } from '../types'
+
+import './treasury.css'
+
+/** How long each beat of the elimination lasts. Slow on purpose — the wait is the point. */
+const SHIVER_MS = 1400
+const PER_ELIMINATION_MS = 780
+const BEFORE_WINNER_MS = 700
+const AFTER_WINNER_MS = 1300
+
+interface Sequence {
+  contents: TreasureContentPreview[]
+  winner: number
+  /** Indices already darkened. */
+  out: number[]
+  crowned: boolean
+}
+
+export function Treasury() {
+  const treasures = useGameStore((s) => s.treasures)
+  const coins = useGameStore((s) => s.coins)
+  const selectedId = useGameStore((s) => s.selectedTreasureId)
+  const selectTreasure = useGameStore((s) => s.selectTreasure)
+  const buyTreasure = useGameStore((s) => s.buyTreasure)
+  const discardTreasure = useGameStore((s) => s.discardTreasure)
+
+  const [sequence, setSequence] = useState<Sequence | null>(null)
+  const [busy, setBusy] = useState(false)
+  const reveal = useReveal()
+  const timers = useRef<number[]>([])
+
+  // A sequence left running after unmount would set state on a dead component.
+  useEffect(
+    () => () => {
+      timers.current.forEach(clearTimeout)
+    },
+    [],
+  )
+
+  const selected = treasures.find((t) => t.id === selectedId) ?? null
+  const rolling = sequence !== null
+  const contents = sequence?.contents ?? selected?.contents ?? []
+
+  const wait = (ms: number) =>
+    new Promise<void>((resolve) => {
+      timers.current.push(window.setTimeout(resolve, ms))
+    })
+
+  async function buy() {
+    if (!selected || busy || rolling) return
+    setBusy(true)
+
+    // Snapshot before the store refreshes: the contents list is about to
+    // change underneath, and the animation has to run on what was on screen.
+    const snapshot = selected.contents
+    const result = await buyTreasure(selected.id)
+    setBusy(false)
+    if (!result) return
+
+    // Match on dropped_rarity, not drop.rarity. Opening a receptacle triggers
+    // the 27:9:3:1 recalculation, so drop.rarity is what it was *relabelled*
+    // to afterwards, while the treasure on screen still shows the rarity it
+    // was won at. Using drop.rarity makes the match fail and the animation
+    // silently skip.
+    const plan = planElimination(snapshot, {
+      virtue: result.drop.virtue,
+      rarity: result.dropped_rarity,
+    })
+    const finish = () => {
+      setSequence(null)
+      reveal.show([
+        {
+          image: receptacleIcon(result.drop.virtue, result.drop.rarity),
+          title: `${label(result.drop.rarity)} of ${label(result.drop.virtue)}`,
+          note: result.was_pity ? 'pity paid out — now find its key' : 'now find its key',
+        },
+      ])
+    }
+
+    if (!plan) {
+      finish()
+      return
+    }
+
+    setSequence({ contents: snapshot, winner: plan.winner, out: [], crowned: false })
+
+    await wait(SHIVER_MS)
+    for (const index of plan.order) {
+      await wait(PER_ELIMINATION_MS)
+      setSequence((current) =>
+        current ? { ...current, out: [...current.out, index] } : current,
+      )
+    }
+    await wait(BEFORE_WINNER_MS)
+    setSequence((current) => (current ? { ...current, crowned: true } : current))
+    await wait(AFTER_WINNER_MS)
+    finish()
+  }
+
+  function skip() {
+    timers.current.forEach(clearTimeout)
+    timers.current = []
+    setSequence(null)
+  }
+
+  const tooPoor = selected !== null && coins < selected.price
+
+  return (
+    <div className="treasury">
+      <div className="chests">
+        {treasures.length === 0 && <p className="empty">No treasures right now.</p>}
+        {treasures.map((treasure) => (
+          <TreasureCard
+            key={treasure.id}
+            treasure={treasure}
+            selected={treasure.id === selectedId}
+            disabled={rolling}
+            onSelect={() => selectTreasure(treasure.id)}
+          />
+        ))}
+      </div>
+
+      <div className="contents">
+        {contents.length === 0 ? (
+          <span className="empty">Pick a treasure to see what is inside</span>
+        ) : (
+          contents.map((item, index) => {
+            const isOut = sequence?.out.includes(index) ?? false
+            const isWinner = sequence?.crowned === true && sequence.winner === index
+            return (
+              <div
+                key={index}
+                className={
+                  'floater' +
+                  (rolling && !isOut && !isWinner ? ' shiver' : '') +
+                  (isOut ? ' out' : '') +
+                  (isWinner ? ' won' : '')
+                }
+              >
+                <img
+                  src={receptacleIcon(item.virtue, item.rarity)}
+                  alt={`${label(item.rarity)} of ${label(item.virtue)}`}
+                />
+                <span className="fname">
+                  {label(item.rarity)} of {label(item.virtue)}
+                </span>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      <div className="buy-row">
+        {rolling ? (
+          <>
+            <span className="rolling">rolling…</span>
+            <button type="button" className="btn-ghost" onClick={skip}>
+              Skip
+            </button>
+          </>
+        ) : (
+          selected && (
+            <>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={busy || tooPoor}
+                onClick={() => void buy()}
+              >
+                {busy ? 'Opening…' : `Buy — ${selected.price}`}
+              </button>
+              {tooPoor && <span className="hint">Not enough coins.</span>}
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => void discardTreasure(selected.id)}
+                title="Once a day, send a treasure's contents back to the pool"
+              >
+                Let it go
+              </button>
+            </>
+          )
+        )}
+      </div>
+
+      {reveal.showing && (
+        <Reveal
+          queue={reveal.queue}
+          index={reveal.index}
+          onAdvance={reveal.advance}
+          onSkip={reveal.skip}
+        />
+      )}
+    </div>
+  )
+}
+
+function TreasureCard({
+  treasure,
+  selected,
+  disabled,
+  onSelect,
+}: {
+  treasure: Treasure
+  selected: boolean
+  disabled: boolean
+  onSelect: () => void
+}) {
+  // Something from the middle of the pile, purely as a thumbnail.
+  const face = treasure.contents[Math.floor(treasure.contents.length / 2)]
+
+  return (
+    <button
+      type="button"
+      className={selected ? 'chest on' : 'chest'}
+      disabled={disabled}
+      onClick={onSelect}
+      aria-pressed={selected}
+      aria-label={`Treasure in slot ${treasure.slot + 1}, ${treasure.price} coins, ${treasure.contents.length} sealed`}
+    >
+      {face ? (
+        <img src={receptacleIcon(face.virtue, face.rarity)} width={52} height={52} alt="" />
+      ) : (
+        <div className="chest-blank" />
+      )}
+      <span className="cprice">
+        <img src={collectableIcon('SUN', 'FRAGMENT')} width={13} height={13} alt="" />
+        {/* The server's fixed price. It is set when the treasure is generated and
+            must not be recomputed from the contents, or emptying one would make
+            it cheaper. */}
+        {treasure.price}
+      </span>
+      <span className="ccount">{treasure.contents.length} sealed</span>
+    </button>
+  )
+}

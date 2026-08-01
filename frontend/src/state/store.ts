@@ -67,7 +67,8 @@ export interface GameStore {
   mergeHarmony: (rarity: CollectableRarity) => Promise<boolean>
   combine: (a: Element, b: Element, rarity: CollectableRarity) => Promise<boolean>
   sell: (element: Element, rarity: CollectableRarity, count: number) => Promise<boolean>
-  buyTreasure: (id: string) => Promise<boolean>
+  /** Resolves to the server's result so the caller can animate the real drop. */
+  buyTreasure: (id: string) => Promise<BuyResult | null>
   discardTreasure: (id: string) => Promise<boolean>
   openReceptacle: (id: string) => Promise<boolean>
 }
@@ -262,12 +263,12 @@ export const useGameStore = create<GameStore>((set, get) => {
           'success',
           result.was_pity
             ? `Pity paid out: a ${result.dropped_rarity.toLowerCase()}!`
-            : `Opened for ${result.price_paid} — a ${result.dropped_rarity.toLowerCase()}.`,
+            : `Bought for ${result.price_paid}.`,
         )
-        return true
+        return result
       } catch (error) {
         report('error', describe(error, 'Could not buy from that treasure.'))
-        return false
+        return null
       }
     },
 

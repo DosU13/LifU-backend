@@ -7,8 +7,8 @@ import { FriendLinksPanel } from './components/FriendLinksPanel'
 import { LoginGate } from './components/LoginGate'
 import { RewardComposer } from './components/RewardComposer'
 import { StatsPanel } from './components/StatsPanel'
-import { TreasurePanel } from './components/TreasurePanel'
 import { Ledger } from './layouts/Ledger'
+import { Treasury } from './layouts/Treasury'
 import { Vault } from './layouts/Vault'
 import { routeFromPath } from './routing'
 import { useSessionStore } from './state/session'
@@ -55,15 +55,7 @@ function GameShell() {
         sections={[
           { id: 'ledger', label: 'Log what you did', node: <Ledger /> },
           { id: 'vault', label: 'Everything you own', node: <Vault /> },
-          {
-            id: 'treasury',
-            label: 'Treasures',
-            node: (
-              <div className="stack">
-                <TreasurePanel />
-              </div>
-            ),
-          },
+          { id: 'treasury', label: 'Treasures', node: <Treasury /> },
         ]}
       />
     </>

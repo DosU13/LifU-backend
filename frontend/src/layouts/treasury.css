@@ -1,0 +1,139 @@
+.treasury {
+  width: 100%;
+  max-width: 1180px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Small on purpose: these only pick which treasure. The contents are the event. */
+.chests {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.chest {
+  width: 138px;
+  padding: 11px 10px 9px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.22s, border-color 0.22s, box-shadow 0.22s;
+}
+
+.chest:hover:not(:disabled) { transform: translateY(-4px); border-color: rgba(245, 193, 74, 0.4); }
+.chest:disabled { opacity: 0.5; }
+
+.chest.on {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 20px 40px -20px rgba(245, 193, 74, 0.7);
+  transform: translateY(-4px);
+}
+
+.chest img { filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.7)); }
+.chest-blank { width: 52px; height: 52px; }
+
+.chest .cprice {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.chest .ccount { font-size: 10.5px; color: var(--faint); }
+
+/* The contents fill the layout. */
+.contents {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding: 6px 0;
+}
+
+.contents .empty { color: var(--faint); font-size: 14px; }
+
+.floater {
+  width: clamp(130px, 17vw, 215px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: float 3.4s ease-in-out infinite;
+  transition: opacity 0.6s, filter 0.6s, transform 0.6s;
+}
+
+.floater img {
+  width: 100%;
+  height: auto;
+  max-height: 46vh;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.7));
+}
+
+.floater .fname { font-size: 12.5px; color: var(--muted); text-align: center; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-13px); }
+}
+
+/* Everything shivers, then they go out one at a time. */
+.floater.shiver { animation: shiver 0.5s ease-in-out infinite; }
+
+@keyframes shiver {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg) scale(1); }
+  50%      { transform: translateY(-6px) rotate(1.5deg) scale(1.04); }
+}
+
+.floater.out {
+  opacity: 0.13;
+  filter: grayscale(1) brightness(0.45);
+  transform: scale(0.78);
+  animation: none;
+}
+
+.floater.won {
+  animation: won-pulse 1.6s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 40px var(--gold))
+    drop-shadow(0 0 90px rgba(245, 193, 74, 0.5));
+}
+
+@keyframes won-pulse {
+  0%, 100% { transform: scale(1.12); }
+  50%      { transform: scale(1.2); }
+}
+
+.buy-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 46px;
+}
+
+.rolling {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.treasury .empty { color: var(--faint); font-size: 14px; }
