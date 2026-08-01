@@ -13,6 +13,12 @@
   color: transparent;
 }
 
+.streak {
+  margin: -14px 0 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .recent { margin-top: 26px; }
 .recent .label { margin-bottom: 8px; padding-left: 4px; }
 

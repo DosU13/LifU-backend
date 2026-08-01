@@ -3,17 +3,6 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
-  build: {
-    rollupOptions: {
-      output: {
-        // three is by far the largest dependency and changes rarely, so give
-        // it its own chunk: app edits then never invalidate it in the cache.
-        manualChunks: {
-          three: ['three', '@react-three/fiber'],
-        },
-      },
-    },
-  },
   server: {
     port: 5173,
     // Same-origin in dev so the session cookie is sent without CORS.

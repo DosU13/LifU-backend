@@ -98,10 +98,12 @@ backend/
   providers/   live content for generated Pouches and Sacks
   api/         thin DRF views over the services
 frontend/
-  src/scene/   the three.js canvas
+  src/layouts/ the Ledger, Vault and Treasury the deck snaps between, plus Admin
+  src/ui/      the deck/shell primitives: Icon, Overlay, tokens shared across layouts
   src/state/   Zustand store and session
-  src/         typed API client and the HUD panels
+  src/         typed API client and routing
 docs/          SPEC, ARCHITECTURE, PLAN, AI_PROMPTS, ICON_PROMPTS
+tools/icongen/ local FLUX.1-dev pipeline that generated the 156 game icons
 ```
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) is the source of truth for the

@@ -1,0 +1,63 @@
+/* The owner's login screen and a friend's trial explanation — the two
+   screens a visitor sees before there is any game state to show. */
+
+.gate {
+  position: relative;
+  z-index: 1;
+  max-width: 26rem;
+  margin: 16vh auto 0;
+  padding: 36px 32px;
+  text-align: center;
+}
+
+.gate h1 {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.gate form {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.gate input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  outline: none;
+  font-size: 15px;
+}
+.gate input:focus { border-color: rgba(245, 193, 74, 0.5); }
+
+.gate .error { margin-top: 14px; font-size: 13.5px; }
+
+.gate.wide {
+  max-width: 38rem;
+  margin-top: 8vh;
+  text-align: left;
+  padding: 40px 36px;
+}
+
+.gate.wide h1 { text-align: center; margin-bottom: 18px; }
+
+.lead {
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 22px;
+}
+
+.explainer {
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 14px;
+  margin: 0 0 22px;
+  color: var(--muted);
+}
+
+.explainer strong { color: var(--text); font-weight: 600; }
+.explainer li { line-height: 1.6; }
+
+.gate.wide > button { display: block; width: 100%; margin-top: 4px; }

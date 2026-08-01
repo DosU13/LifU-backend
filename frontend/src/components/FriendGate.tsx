@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { api } from '../api'
 import { useSessionStore } from '../state/session'
+import '../ui/gate.css'
 
 type Status = 'checking' | 'valid' | 'unknown'
 
@@ -34,7 +35,7 @@ export function FriendGate({ friendName }: { friendName: string }) {
 
   if (status === 'unknown') {
     return (
-      <main className="gate wide">
+      <main className="gate wide panel">
         <h1>LifU</h1>
         <p className="muted">
           This link isn&apos;t one we recognise. Ask Doslan for your own — everyone gets a
@@ -51,7 +52,7 @@ export function FriendGate({ friendName }: { friendName: string }) {
   }
 
   return (
-    <main className="gate wide">
+    <main className="gate wide panel">
       <h1>LifU</h1>
       <p className="lead">
         Hi {friendName} — this is a game Doslan built to make finishing things feel like
@@ -84,10 +85,14 @@ export function FriendGate({ friendName }: { friendName: string }) {
         over.
       </p>
 
-      <button type="button" onClick={() => void onTry()} disabled={busy}>
+      <button type="button" className="btn-primary" onClick={() => void onTry()} disabled={busy}>
         {busy ? 'Setting it up…' : 'Try it'}
       </button>
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
     </main>
   )
 }

@@ -1,6 +1,6 @@
 # LifU — Architecture
 
-Single-user gamified productivity app. Owner logs in with a password and plays for real; friends get shareable trial links. Django + DRF backend, Firebase (Firestore) behind repository interfaces, Groq for AI, React + three.js single-page frontend.
+Single-user gamified productivity app. Owner logs in with a password and plays for real; friends get shareable trial links. Django + DRF backend, SQLite (default; Firestore also supported) behind repository interfaces, Groq for AI, React single-page frontend.
 
 This document is the source of truth for domain rules. Where SPEC.md is ambiguous, the rules here win (they were confirmed with the owner).
 
@@ -59,7 +59,7 @@ LifU/
 │   │   ├── auth.py        # owner password login, session auth
 │   │   └── trial.py       # trial-token resolution middleware/permission
 │   └── tests/             # mirrors package structure
-└── frontend/              # Vite + React + TypeScript + three.js (§10)
+└── frontend/              # Vite + React + TypeScript (§10)
 ```
 
 **Dependency direction (enforced by review, this is the SOLID core):**
@@ -411,32 +411,41 @@ Trial: `POST /api/trial/session {friend_name}` → `{token}` (name must be a val
 
 ---
 
-## 10. Frontend (`frontend/` — Vite, React 18, TypeScript, three.js via @react-three/fiber + drei, Zustand)
+## 10. Frontend (`frontend/` — Vite, React 18, TypeScript, Zustand)
 
-One page, no router except the friend path. three.js is intentionally minimal at first ("fine looking easy 2D game" — owner is learning three.js); the Canvas exists from day one so 3D ideas can grow into it.
+Rebuilt in Part II (`docs/PLAN.md` phases 16-22) onto a three-layout scroll-snap
+design in place of the original HTML-panels-plus-three.js-canvas layout from
+Part I. There is no 3D scene: `@react-three/fiber`/`three` and the whole
+`src/scene/` tree were dropped in Phase 22 once nothing referenced them, and
+156 generated PNG icons (`frontend/public/icons/`, `tools/icongen/`) carry the
+visual weight three.js was going to.
+
+Two pages, routed in `routing.ts` without a router library — `/admin` is
+matched ahead of the friend-name pattern, or it would read as a friend called
+"admin":
 
 ```
 App
-├── (path "/{friend_name}") FriendGate → explanation page + "try it" → trial token → same GameScreen (trialMode)
-├── (path "/") LoginGate → GameScreen
-└── GameScreen
-    ├── SceneCanvas (R3F <Canvas>, orthographic camera — 2.5D)
-    │   ├── TreasureShelf → 3 × TreasureMesh (click → BuyPanel; drop/reveal animation)
-    │   ├── CollectableWall (instanced meshes per element×rarity, count labels)
-    │   └── FxLayer (harmony build-up: replays "+1" burst `extras` times from server response;
-    │               merge poof; coin sparkle)
-    └── Hud (plain HTML/CSS overlay, all interaction logic)
-        ├── TaskComposer        → POST /tasks → award toast + FxLayer trigger
-        ├── RewardComposer      → modes: "my reward" | "secret gift" (masked textarea + friend select)
-        ├── MergePanel          → merge/harmony/combine/sell actions
-        ├── VaultPanel          → DROPPED receptacles, key requirement badges, open button
-        ├── TreasurePanel       → price, contents, pity bars, buy/discard
-        ├── StatsPanel, WalletBadge, FriendLinksPanel (owner only)
+├── (path "/{friend_name}") FriendGate → explanation page + "try it" → trial token → same GameShell (trialMode)
+├── (path "/admin") LoginGate → Admin
+│   ├── RewardComposer   → modes: "my reward" | "secret gift" (masked textarea + friend select)
+│   ├── RewardList       → GET /api/rewards; text yes, receptacle identity never (§2)
+│   └── FriendLinks      → create + copy shareable trial links (owner only)
+└── (path "/") LoginGate → GameShell
+    └── Deck (ui/Deck.tsx — one scroll container, three full-height sections,
+        `scroll-snap-stop: always` so a fast flick cannot skip a layout)
+        ├── Ledger    → greeting, task composer, staged reveal, recent tasks, streak
+        ├── Vault     → hoard grid, double-click ItemDetail (sell / key status / open),
+        │               one merge bench (bench.ts detects merge-up | harmony | combine | open
+        │               from whatever is dropped in, mirroring services/merger_service.py)
+        └── Treasury  → compact treasure selectors, large floating contents, drawn-out
+                        elimination (elimination.ts: the client only orders which losers
+                        fade — the survivor is always the server's actual drop), discard
 ```
 
-**State:** one Zustand store mirroring `GET /api/state`; every mutating call returns the deltas it changed and the store patches them (no refetch-everything). A thin typed `api.ts` client owns fetch + error-envelope handling + the trial-token header. Server is authoritative for all randomness; the frontend only animates results it is told about (harmony `extras`, drop outcome).
+**State:** one Zustand store (`state/store.ts`) mirroring `GET /api/state`; every mutating call returns the deltas it changed and the store patches them (no refetch-everything). A thin typed `api.ts` client owns fetch + error-envelope handling + the trial-token header. Server is authoritative for all randomness — `bench.ts` and `elimination.ts` only ever animate or route to what the server already decided, never invent a count or a winner themselves.
 
-**Testing:** Vitest for store reducers and `api.ts`; components smoke-tested with @testing-library/react; no three.js unit tests (visual, verified by hand).
+**Testing:** Vitest for the store, `api.ts`, and the two pure-logic modules (`bench.ts`, `elimination.ts` — table-tested against every merge rule and combine pair, and against a shuffle run 50 times to prove the winner is never touched); components rendered with @testing-library/react, including a test that walks all 156 icon paths and asserts each resolves to a real file on disk.
 
 ---
 

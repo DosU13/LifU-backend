@@ -1,4 +1,5 @@
 import { useGameStore } from '../state/store'
+import '../ui/toasts.css'
 
 export function EventToasts() {
   const events = useGameStore((s) => s.events)
@@ -10,7 +11,7 @@ export function EventToasts() {
       {events.map((event) => (
         <li key={event.id} className={`toast ${event.kind}`}>
           <span>{event.message}</span>
-          <button type="button" className="mini" onClick={() => dismiss(event.id)} aria-label="Dismiss">
+          <button type="button" onClick={() => dismiss(event.id)} aria-label="Dismiss">
             ×
           </button>
         </li>

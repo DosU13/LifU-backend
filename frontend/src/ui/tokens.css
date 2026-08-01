@@ -130,8 +130,10 @@ input, textarea {
 .btn-violet:disabled { opacity: 0.35; box-shadow: none; }
 
 .btn-ghost {
-  /* Declared rather than inherited: the Part-I stylesheet loads after this one
-     and styles bare `button`, so anything left unset there leaks through. */
+  /* Every property stated explicitly rather than inherited from the bare
+     `button` reset above — cheap insurance, and it was not cheap insurance
+     until Phase 22: the old stylesheet used to load after this one and style
+     bare `button`, so anything left unset here leaked through. */
   background: transparent;
   border: 1px solid var(--line);
   color: var(--muted);
@@ -151,6 +153,22 @@ input, textarea {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--faint);
+}
+
+/* --- small utilities used outside any single layout --- */
+
+.muted { color: var(--muted); }
+.error { color: var(--bad); }
+
+.centered-page {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+}
+
+.centered {
+  text-align: center;
+  padding: 3rem;
 }
 
 /* Motion is decoration here; anyone who has asked for less should get less. */

@@ -8,7 +8,6 @@ import type {
   GameState,
   OpenResult,
   Receptacle,
-  ReceptacleRarity,
   Stocks,
   TaskCompletion,
   Treasure,
@@ -21,17 +20,6 @@ export interface GameEvent {
   message: string
 }
 
-/**
- * Something for the 3D scene to animate. Counts come from the server response
- * — the canvas replays what actually happened rather than rolling its own.
- */
-export type FxPayload =
-  | { kind: 'harmony'; bursts: number }
-  | { kind: 'drop'; slot: number; rarity: ReceptacleRarity }
-  | { kind: 'open' }
-
-export type FxEvent = FxPayload & { id: number }
-
 export interface GameStore {
   coins: number
   stocks: Stocks
@@ -43,13 +31,11 @@ export interface GameStore {
   error: string | null
   hydrated: boolean
   events: GameEvent[]
-  fx: FxEvent[]
   selectedTreasureId: string | null
 
   hydrate: () => Promise<void>
   reset: () => void
   dismissEvent: (id: number) => void
-  consumeFx: (id: number) => void
   selectTreasure: (id: string | null) => void
 
   // Deltas applied from mutating calls, instead of refetching the world.
@@ -83,7 +69,6 @@ const emptyState = {
   error: null,
   hydrated: false,
   events: [] as GameEvent[],
-  fx: [] as FxEvent[],
   selectedTreasureId: null,
 }
 
@@ -97,10 +82,6 @@ export const useGameStore = create<GameStore>((set, get) => {
   function report(kind: GameEvent['kind'], message: string) {
     const event = { id: nextEventId++, kind, message }
     set({ events: [...get().events, event].slice(-4) })
-  }
-
-  function emitFx(payload: FxPayload) {
-    set({ fx: [...get().fx, { ...payload, id: nextEventId++ }] })
   }
 
   return {
@@ -127,8 +108,6 @@ export const useGameStore = create<GameStore>((set, get) => {
     reset: () => set({ ...emptyState }),
 
     dismissEvent: (id) => set({ events: get().events.filter((e) => e.id !== id) }),
-
-    consumeFx: (id) => set({ fx: get().fx.filter((e) => e.id !== id) }),
 
     selectTreasure: (id) => set({ selectedTreasureId: id }),
 
@@ -210,8 +189,6 @@ export const useGameStore = create<GameStore>((set, get) => {
       try {
         const result = await api.harmony(rarity)
         set({ stocks: result.stocks })
-        // The base five plus however many extras the server actually rolled.
-        emitFx({ kind: 'harmony', bursts: result.extras + 1 })
         report(
           'success',
           result.extras > 0
@@ -251,11 +228,9 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     buyTreasure: async (id) => {
-      const slot = get().treasures.find((t) => t.id === id)?.slot ?? 0
       try {
         const result = await api.buyTreasure(id)
         get().applyBuyResult(result)
-        emitFx({ kind: 'drop', slot, rarity: result.dropped_rarity })
         // Contents, price and pity all moved; and an emptied treasure was replaced.
         await get().refreshTreasures()
         if (result.treasure_gone) set({ selectedTreasureId: null })
@@ -290,7 +265,6 @@ export const useGameStore = create<GameStore>((set, get) => {
       try {
         const result = await api.openReceptacle(id)
         get().applyOpenResult(result)
-        emitFx({ kind: 'open' })
         // The key was spent.
         const { stocks } = await api.collectables()
         set({ stocks })

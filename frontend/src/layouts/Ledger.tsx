@@ -26,6 +26,7 @@ const EXPANDED = 14
 
 export function Ledger() {
   const completeTask = useGameStore((s) => s.completeTask)
+  const stats = useGameStore((s) => s.stats)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [tasks, setTasks] = useState<Task[]>([])
@@ -82,6 +83,11 @@ export function Ledger() {
   return (
     <div className="ledger">
       <h1 className="greeting">{greeting}</h1>
+      {stats && stats.streak > 0 && (
+        <p className="streak">
+          🔥 {stats.streak} day{stats.streak === 1 ? '' : 's'} running
+        </p>
+      )}
 
       <form className="composer" onSubmit={onSubmit}>
         <textarea
