@@ -9,6 +9,7 @@ import { relativeTime } from '../ui/relativeTime'
 import { useReveal } from '../ui/useReveal'
 import type { Element, Task } from '../types'
 
+import '../ui/composer.css'
 import './ledger.css'
 
 const GREETINGS = [

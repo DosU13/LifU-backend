@@ -1,0 +1,92 @@
+/* The text-entry surface shared by the Ledger's task composer and the
+   Admin page's reward composer — same shape, same feel, one definition. */
+
+.composer {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px;
+  transition: border-color var(--beat), box-shadow var(--beat);
+}
+
+.composer:focus-within {
+  border-color: rgba(245, 193, 74, 0.5);
+  box-shadow:
+    0 0 0 4px rgba(245, 193, 74, 0.08),
+    0 20px 50px -20px rgba(245, 193, 74, 0.35);
+}
+
+.composer textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: none;
+  background: none;
+  border: 0;
+  outline: none;
+  font-size: 17px;
+  line-height: 1.6;
+  padding: 18px 20px;
+}
+
+.composer textarea::placeholder { color: var(--faint); }
+
+.composer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 10px 10px 20px;
+  flex-wrap: wrap;
+}
+
+.hint { font-size: 12.5px; color: var(--faint); }
+
+/* Spoiler-safe paste: the owner must not be able to read a friend's gift as
+   they type or paste it in. */
+.masked { -webkit-text-security: disc; }
+@supports not (-webkit-text-security: disc) {
+  .masked { filter: blur(5px); }
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 6px 6px 0;
+}
+
+.tab {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  transition: all var(--beat-fast);
+}
+
+.tab:hover { color: var(--text); }
+
+.tab.active {
+  background: rgba(245, 193, 74, 0.12);
+  border-color: rgba(245, 193, 74, 0.5);
+  color: var(--gold);
+}
+
+.composer-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.composer-field select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}

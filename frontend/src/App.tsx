@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { api } from './api'
 import { EventToasts } from './components/EventToasts'
 import { FriendGate } from './components/FriendGate'
-import { FriendLinksPanel } from './components/FriendLinksPanel'
 import { LoginGate } from './components/LoginGate'
-import { RewardComposer } from './components/RewardComposer'
-import { StatsPanel } from './components/StatsPanel'
+import { Admin } from './layouts/Admin'
 import { Ledger } from './layouts/Ledger'
 import { Treasury } from './layouts/Treasury'
 import { Vault } from './layouts/Vault'
@@ -15,7 +12,6 @@ import { useSessionStore } from './state/session'
 import { useGameStore } from './state/store'
 import { Deck } from './ui/Deck'
 import { TopBar } from './ui/TopBar'
-import type { FriendLink } from './types'
 
 /**
  * The root page. Three full-height layouts the deck snaps between.
@@ -62,39 +58,6 @@ function GameShell() {
   )
 }
 
-/** Rewards management. Deliberately a separate page, not a fourth layout. */
-function AdminPage() {
-  const [friends, setFriends] = useState<FriendLink[]>([])
-
-  useEffect(() => {
-    void api
-      .listFriends()
-      .then(({ friends: list }) => setFriends(list))
-      .catch(() => setFriends([]))
-  }, [])
-
-  const createFriend = useCallback(async (name: string) => {
-    const link = await api.createFriend(name)
-    setFriends((current) => [...current, link])
-    return link
-  }, [])
-
-  return (
-    <>
-      <TopBar showAdminLink={false} />
-      <EventToasts />
-      <div className="admin-page">
-        <a className="pill back-link" href="/">
-          ← Back to the game
-        </a>
-        <RewardComposer friends={friends} />
-        <FriendLinksPanel friends={friends} onCreate={createFriend} />
-        <StatsPanel />
-      </div>
-    </>
-  )
-}
-
 export function App() {
   const { authenticated, checking, check } = useSessionStore()
   const [route] = useState(routeFromPath)
@@ -113,5 +76,5 @@ export function App() {
     return <LoginGate />
   }
 
-  return route.kind === 'admin' ? <AdminPage /> : <GameShell />
+  return route.kind === 'admin' ? <Admin /> : <GameShell />
 }
