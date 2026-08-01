@@ -5,12 +5,11 @@ import { EventToasts } from './components/EventToasts'
 import { FriendGate } from './components/FriendGate'
 import { FriendLinksPanel } from './components/FriendLinksPanel'
 import { LoginGate } from './components/LoginGate'
-import { MergePanel } from './components/MergePanel'
 import { RewardComposer } from './components/RewardComposer'
 import { StatsPanel } from './components/StatsPanel'
 import { TreasurePanel } from './components/TreasurePanel'
-import { VaultPanel } from './components/VaultPanel'
 import { Ledger } from './layouts/Ledger'
+import { Vault } from './layouts/Vault'
 import { routeFromPath } from './routing'
 import { useSessionStore } from './state/session'
 import { useGameStore } from './state/store'
@@ -55,16 +54,7 @@ function GameShell() {
       <Deck
         sections={[
           { id: 'ledger', label: 'Log what you did', node: <Ledger /> },
-          {
-            id: 'vault',
-            label: 'Everything you own',
-            node: (
-              <div className="stack">
-                <VaultPanel />
-                <MergePanel />
-              </div>
-            ),
-          },
+          { id: 'vault', label: 'Everything you own', node: <Vault /> },
           {
             id: 'treasury',
             label: 'Treasures',

@@ -1,0 +1,208 @@
+.vault {
+  width: 100%;
+  max-width: 1080px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hoard {
+  padding: 22px 26px;
+  max-height: 54vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.hoard .empty {
+  color: var(--faint);
+  font-size: 14.5px;
+  margin: 0;
+}
+
+.hoard .label { margin: 16px 0 12px; }
+.hoard .label:first-child { margin-top: 0; }
+
+.hoard-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.item {
+  position: relative;
+  width: 82px;
+  padding: 9px 4px 7px;
+  border-radius: 13px;
+  border: 1px solid transparent;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: background var(--beat-fast), border-color var(--beat-fast), transform var(--beat-fast);
+}
+
+.item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line);
+  transform: translateY(-3px);
+}
+
+.item img { filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6)); }
+.item.locked img { opacity: 0.78; }
+
+.item .n {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #cfc4dc;
+}
+
+.item .lock,
+.item .ready {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  font-size: 11px;
+}
+.item .lock { color: var(--gold); text-shadow: 0 0 8px rgba(245, 193, 74, 0.8); }
+.item .ready { color: var(--good); text-shadow: 0 0 8px rgba(127, 201, 154, 0.8); }
+
+/* Name on hover, so the grid stays icons rather than a wall of labels. */
+.item::after {
+  content: attr(data-name);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel-solid);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--beat-fast);
+  z-index: 5;
+}
+.item:hover::after { opacity: 1; }
+
+/* --- the bench --- */
+
+.bench {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+  position: relative;
+}
+
+.slots {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 76px;
+  padding: 6px 14px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+}
+
+.slots .placeholder { color: var(--faint); font-size: 13.5px; }
+.slots .item { width: 62px; }
+
+.qty {
+  width: 74px;
+  padding: 12px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  outline: none;
+  font-size: 16px;
+}
+.qty:focus { border-color: rgba(245, 193, 74, 0.6); }
+
+.bench-reason {
+  margin: 0;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* --- the (i) and its recipe card --- */
+
+.info-wrap { position: relative; display: flex; }
+
+.info-btn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--serif);
+  font-size: 14px;
+  font-style: italic;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s;
+}
+.info-btn:hover,
+.info-btn.on {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: rgba(245, 193, 74, 0.1);
+}
+
+.info-pop {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 0;
+  width: min(480px, calc(100vw - 64px));
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 26px 60px -20px rgba(0, 0, 0, 0.9);
+  z-index: 20;
+  text-align: left;
+}
+
+.info-pop h3 {
+  font-size: 15px;
+  margin: 16px 0 4px;
+  color: var(--gold);
+}
+.info-pop h3:first-child { margin-top: 0; }
+
+.info-pop p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.recipe-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.pairs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 18px;
+}
+
+.ladder {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ladder b { color: #cfc4dc; font-weight: 500; }
+.arrow { color: var(--faint); padding: 0 2px; }
