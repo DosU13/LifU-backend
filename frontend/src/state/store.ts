@@ -10,6 +10,7 @@ import type {
   Receptacle,
   ReceptacleRarity,
   Stocks,
+  TaskCompletion,
   Treasure,
 } from '../types'
 
@@ -59,7 +60,8 @@ export interface GameStore {
   refreshTreasures: () => Promise<void>
 
   // Player actions. Each reports its own outcome and returns success.
-  completeTask: (text: string) => Promise<boolean>
+  /** Resolves to the server's payout so the caller can replay it, or null on failure. */
+  completeTask: (text: string) => Promise<TaskCompletion | null>
   submitReward: (text: string, isSecret: boolean, friendName?: string) => Promise<boolean>
   mergeUp: (element: Element, rarity: CollectableRarity) => Promise<boolean>
   mergeHarmony: (rarity: CollectableRarity) => Promise<boolean>
@@ -159,22 +161,21 @@ export const useGameStore = create<GameStore>((set, get) => {
     completeTask: async (text) => {
       try {
         const result = await api.completeTask(text)
-        const awarded = Object.entries(result.fragments_awarded)
         // Fragments changed, and so did the stats/streak — refresh both.
         const [{ stocks }, stats] = await Promise.all([api.collectables(), api.stats()])
         set({ stocks, stats })
+        // The drops themselves are replayed by the caller's reveal, so this
+        // only carries what the reveal does not show.
         report(
           'success',
-          awarded.length === 0
+          Object.keys(result.fragments_awarded).length === 0
             ? `Valued at ${result.task.value}. No fragments this time.`
-            : `Valued at ${result.task.value} · ${awarded
-                .map(([element, count]) => `${count} ${element.toLowerCase()}`)
-                .join(', ')}`,
+            : `Valued at ${result.task.value}.`,
         )
-        return true
+        return result
       } catch (error) {
         report('error', describe(error, 'Could not save that task.'))
-        return false
+        return null
       }
     },
 

@@ -8,8 +8,22 @@ import {
   type CollectableRarity,
   type Element,
   type ReceptacleRarity,
+  type TaskVirtue,
   type Virtue,
 } from './types'
+
+/**
+ * Which virtue each base element is paid for — mirrors ELEMENT_TASK_VIRTUE in
+ * core/mappings.py. Only the five base elements are earned from tasks; the
+ * rest are crafted, so they never appear here.
+ */
+export const ELEMENT_TASK_VIRTUE: Partial<Record<Element, TaskVirtue>> = {
+  SPACE: 'AWARENESS',
+  AIR: 'CURIOSITY',
+  FIRE: 'WILLPOWER',
+  WATER: 'COMPASSION',
+  EARTH: 'DISCIPLINE',
+}
 
 export const ELEMENT_EMOJI: Record<Element, string> = {
   SPACE: '🌌',

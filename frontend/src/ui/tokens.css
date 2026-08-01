@@ -130,14 +130,21 @@ input, textarea {
 .btn-violet:disabled { opacity: 0.35; box-shadow: none; }
 
 .btn-ghost {
+  /* Declared rather than inherited: the Part-I stylesheet loads after this one
+     and styles bare `button`, so anything left unset there leaks through. */
+  background: transparent;
   border: 1px solid var(--line);
   color: var(--muted);
   padding: 12px 24px;
   border-radius: var(--radius-sm);
   font-size: 14px;
-  transition: color 0.2s, border-color 0.2s;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
-.btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--muted); }
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-color: var(--muted);
+}
 
 .label {
   font-size: 11.5px;

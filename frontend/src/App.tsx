@@ -8,9 +8,9 @@ import { LoginGate } from './components/LoginGate'
 import { MergePanel } from './components/MergePanel'
 import { RewardComposer } from './components/RewardComposer'
 import { StatsPanel } from './components/StatsPanel'
-import { TaskComposer } from './components/TaskComposer'
 import { TreasurePanel } from './components/TreasurePanel'
 import { VaultPanel } from './components/VaultPanel'
+import { Ledger } from './layouts/Ledger'
 import { routeFromPath } from './routing'
 import { useSessionStore } from './state/session'
 import { useGameStore } from './state/store'
@@ -54,15 +54,7 @@ function GameShell() {
       <EventToasts />
       <Deck
         sections={[
-          {
-            id: 'ledger',
-            label: 'Log what you did',
-            node: (
-              <div className="stack">
-                <TaskComposer />
-              </div>
-            ),
-          },
+          { id: 'ledger', label: 'Log what you did', node: <Ledger /> },
           {
             id: 'vault',
             label: 'Everything you own',
