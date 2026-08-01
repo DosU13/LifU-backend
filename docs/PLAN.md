@@ -76,3 +76,116 @@ One phase per session, in order. Every phase ends with: app runnable (`runserver
 ## Phase 15 — Friend page, polish, deploy prep
 **Goal:** `/{friend_name}` route: explanation page + "try it" → trial session → same GameScreen in trialMode (banner, no friend-links panel); CORS for lifu.doslan.com; swagger pass (every endpoint documented with request/response schemas); README with setup steps.
 **Accept:** unknown friend name → friendly "ask Doslan for a link" page; trial reload = fresh game; `python -m pytest` + `npm test` + both linters green; fresh-clone setup following README works with `REPO_BACKEND=memory` and no secrets.
+
+---
+
+# Part II — Frontend rebuild
+
+Phases 1–15 are complete. The HUD they produced was functional but not designed;
+Part II replaces it with the three-layout scroll-snap design agreed in
+`frontend/public/mockup.html` (delete that file at the end of Phase 22 — it is
+scaffolding, not a deliverable).
+
+Same rules as Part I: one phase per session, app runnable at the end of each,
+`pytest` + `ruff` + `npm test` + `npm run lint` + `npm run build` all green
+before a phase counts as finished.
+
+**The shape:** one root page that scroll-snaps between three full-height layouts
+— *Ledger* (log a task, see recent ones), *Vault* (everything you own, merge
+bench), *Treasury* (three treasures, buy, elimination) — plus a separate
+`/admin` page for rewards.
+
+## Phase 16 — ★ HARD — Seal the reward↔receptacle link (§2 privacy)
+**Goal:** make the surprise actually hold. Today `serialize_receptacle` returns
+`virtue`, `rarity` and `reward_text` in one object and only withholds the text
+when `is_secret`, so a reward you wrote yourself is readable *before* you open
+its receptacle — and the admin list would tell you which receptacle each reward
+landed in. Hiding it on one endpoint is not enough; the link leaks from
+whichever side is left open.
+**Create:** `serialize_receptacle` withholds `reward_text` for **any** unopened
+receptacle, not just secret ones; new `GET /api/rewards` for the admin page
+returning `{text, is_secret, friend_name, created_at}` and deliberately **no**
+`virtue`, `rarity`, `value` or receptacle id; update hard rule 6 in
+[CLAUDE.md](../CLAUDE.md) and the privacy rule in [ARCHITECTURE.md](ARCHITECTURE.md) §2.
+**Accept:** tests assert an own, non-secret, unopened receptacle returns
+`reward_text: null` from `/api/receptacles` *and* from `/api/state`; opened ones
+still return it; `/api/rewards` response contains no rarity/virtue/value key at
+all (assert on the key set, not on values); every existing secret-leak test
+still passes.
+
+## Phase 17 — Design system + app shell
+**Goal:** the tokens, the icon layer, and the snapping deck — no game content yet.
+**Create:** `src/ui/tokens.css` (palette, radii, the serif/sans pairing — lift
+from the mockup), `src/ui/Icon.tsx` mapping a stock key to
+`/icons/{collectables|receptacles}/{name}.png`, `src/ui/Deck.tsx` (scroll-snap
+container + section rail), `src/ui/Overlay.tsx` (the shared veil: staged prize
+queue and modal), restyled `WalletBadge`, `App.tsx` routing root / `/admin` /
+`/{friend}`.
+**Accept:** three empty sections snap and the rail tracks them; a test walks all
+16 elements × 6 rarities and 10 virtues × 6 tiers and asserts every one of the
+156 resolved icon paths exists on disk; strict TS, build clean.
+
+## Phase 18 — Layout 1: the Ledger
+**Goal:** log a task and watch it pay out.
+**Create:** `src/layouts/Ledger.tsx`, rewritten `TaskComposer`, `TaskList`
+(drops as `13×[icon]`, relative time, 4 rows then `…more…` → 14), randomised
+greeting, and the staged reveal: one drop card at a time with Accept, plus Skip
+when more than one is queued.
+**Accept:** the reveal replays exactly what the server returned, in server order
+— never a client-invented count; `…more…` expands; empty state reads well;
+vitest covers queue advance, skip, and the single-item case hiding Skip.
+
+## Phase 19 — ★ HARD — Layout 2: the Vault
+**Goal:** everything you own, inspect, and one bench for every merge.
+**Create:** `src/layouts/Vault.tsx`, `Hoard` (grouped grid, counts, hover names,
+🔒/● key badges), `ItemDetail` (double-click: collectables show element/rarity/
+held/next-merge; receptacles show key status and an Open button only when the
+key is actually held), `MergeBench` (drag-and-drop + quantity + a button that
+names the detected operation), `RecipeInfo` popover with the merge ladder,
+harmony recipe and all 10 combine pairs.
+**Why hard:** the bench maps an arbitrary set of dropped items onto exactly one
+of merge-up / harmony / combine / open, or refuses with a reason. That mirrors
+backend rules and must not drift from them — derive from `src/domain.ts`, which
+already mirrors `core/mappings.py`.
+**Accept:** vitest table-drives detection: 3 identical → merge-up to the right
+rarity; 5 distinct base at one rarity → harmony; 2 base + 1 harmony → the
+correct combined element for **all 10 pairs**; CORE rejected; invalid sets
+disabled with a reason shown. Key availability is computed client-side and
+matches `key_for_receptacle`, so a keyless Open is never a 400 round-trip.
+
+## Phase 20 — Layout 3: the Treasury
+**Goal:** small selectors, huge contents, a drawn-out elimination.
+**Create:** `src/layouts/Treasury.tsx`, `TreasureSelector` (compact cards),
+`Contents` (large floating receptacles filling the layout), and the elimination
+sequencer: everything shivers, then contents go dark **one at a time in random
+order** until the survivor flares and the prize overlay opens.
+**Why the order matters:** the survivor is whichever receptacle the server
+actually dropped. The client only chooses the *order the losers fade*, never the
+winner — same server-authoritative rule as the existing fx queue.
+**Accept:** exactly `contents − 1` eliminate; the survivor equals the server's
+`drop`; the sequence is skippable; buy is disabled while rolling and when coins
+< price; the displayed price is the treasure's fixed `price` field (regression
+guard for the bug where price drifted as contents dropped out).
+
+## Phase 21 — Admin page
+**Goal:** rewards in, rewards listed, nothing leaked.
+**Create:** `src/layouts/Admin.tsx`, restyled `RewardComposer` (keep the
+spoiler-safe masked textarea and the friend selector), `RewardList` fed by the
+Phase-16 `/api/rewards`, and the friend-link manager moved here.
+**Accept:** a test renders the list with fixture data and asserts no virtue or
+rarity string appears anywhere in the DOM; a friend's secret gift renders masked
+until opened; creating a link shows the shareable URL.
+
+## Phase 22 — Cutover and cleanup
+**Goal:** delete the old UI and place the four features that have no home in the
+three layouts.
+**Placements (decide before starting, these are the proposal):** sell → inside
+the collectable `ItemDetail`; once-a-day discard → Treasury, near the selectors;
+stats/streak → Ledger header; friend links → Admin (Phase 21).
+**Delete:** `src/scene/*`, `StateDebugView`, the Part-I panels superseded by the
+new layouts, `frontend/public/mockup.html` and `mockup-admin.html`. Drop `three`
+and `@react-three/fiber` from `package.json` **only if** the 3D scene is really
+gone — that removes the three.js learning goal from Part I, so confirm first.
+**Accept:** no dangling imports; `npm run build` clean and measurably smaller if
+three was dropped; every vitest green; the full loop — task → merge → buy →
+open — playable end to end against `REPO_BACKEND=memory`; README updated.
