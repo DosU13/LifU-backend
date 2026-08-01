@@ -10,14 +10,17 @@ function receptacle(id: string, overrides: Partial<Receptacle> = {}): Receptacle
     state: 'DROPPED',
     virtue: 'SERENITY',
     rarity: 'CHEST',
-    value: 20,
     is_generated: false,
     is_secret: false,
     friend_name: null,
     created_at: '2026-01-01T00:00:00Z',
     opened_at: null,
     key_needed: { element: 'OCEAN', rarity: 'CRYSTAL' },
-    reward_text: 'a nice dinner',
+    // DROPPED means unopened, and the server sends nothing about the contents
+    // until it is opened. Override these only on an OPENED fixture.
+    value: null,
+    reward_text: null,
+    content: null,
     ...overrides,
   }
 }

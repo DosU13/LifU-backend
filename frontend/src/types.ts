@@ -88,16 +88,33 @@ export interface Receptacle {
   state: ReceptacleState
   virtue: Virtue
   rarity: ReceptacleRarity
-  value: number
   is_generated: boolean
   is_secret: boolean
   friend_name: string | null
   created_at: string
   opened_at: string | null
   key_needed: KeyRequirement
-  /** Null while a secret gift is still unopened — the server withholds it. */
+  /**
+   * Everything below describes the contents, so the server sends null until
+   * the receptacle is OPENED — including rewards you wrote yourself. Knowing
+   * both the reward and its rarity would rank your whole wishlist.
+   */
+  value: number | null
   reward_text: string | null
-  content?: GeneratedContent | null
+  content: GeneratedContent | null
+}
+
+/**
+ * A reward as its author sees it on the admin page. Deliberately carries no
+ * virtue, rarity, value or id: which receptacle it became is the surprise.
+ */
+export interface Reward {
+  /** Null for a friend's secret gift until it has been opened. */
+  text: string | null
+  is_secret: boolean
+  friend_name: string | null
+  created_at: string
+  is_opened: boolean
 }
 
 /** What a treasure shows before you buy: no values, no reward text. */

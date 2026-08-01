@@ -121,35 +121,74 @@ class RewardCreateRequestSerializer(serializers.Serializer):
     friend_name = serializers.CharField(required=False, allow_null=True, max_length=100)
 
 
+def _serialize_content(content) -> dict | None:
+    if content is None:
+        return None
+    return {
+        "kind": content.kind.value,
+        "title": content.title,
+        "url": content.url,
+        "author": content.author,
+        "text": content.text,
+    }
+
+
 def serialize_receptacle(receptacle: Receptacle) -> dict:
     """Serialize a receptacle for the API.
 
-    Privacy rule (ARCHITECTURE §2): the reward_text of a secret gift is never
-    exposed until the receptacle has actually been opened.
+    Privacy rule (ARCHITECTURE §2): an unopened receptacle reveals only what is
+    needed to open it — its virtue, its rarity and therefore its key — and
+    nothing whatsoever about what is inside.
+
+    This is stricter than withholding secret gifts alone. Rewards the owner
+    wrote themselves must be withheld too, because rarity is recalculated by
+    value: pairing a visible reward with a visible rarity would rank every
+    reward they own, and there would be nothing left to find out on opening.
+    The admin page is the mirror of this — see `serialize_reward`, which shows
+    the text and hides the receptacle.
     """
     is_opened = receptacle.state is ReceptacleState.OPENED
     key_element, key_rarity = key_for_receptacle(receptacle.virtue, receptacle.rarity)
 
-    data = {
+    return {
         "id": receptacle.id,
         "state": receptacle.state.value,
         "virtue": receptacle.virtue.value,
         "rarity": receptacle.rarity.name,
-        "value": receptacle.value,
         "is_generated": receptacle.is_generated,
         "is_secret": receptacle.is_secret,
         "friend_name": receptacle.friend_name,
         "created_at": receptacle.created_at,
         "opened_at": receptacle.opened_at,
         "key_needed": {"element": key_element.value, "rarity": key_rarity.name},
+        # Everything below describes the contents, so it appears only once the
+        # receptacle has been opened.
+        "value": receptacle.value if is_opened else None,
+        "reward_text": receptacle.reward_text if is_opened else None,
+        "content": _serialize_content(receptacle.content) if is_opened else None,
     }
 
-    if receptacle.is_secret and not is_opened:
-        data["reward_text"] = None
-    else:
-        data["reward_text"] = receptacle.reward_text
 
-    return data
+def serialize_reward(receptacle: Receptacle) -> dict:
+    """A reward as its author sees it on the admin page.
+
+    Carries no virtue, rarity, value or receptacle id on purpose: which
+    receptacle a reward was sealed into is exactly the thing that has to stay
+    hidden, and since rarity is apportioned by value, exposing it would rank
+    the owner's whole wishlist for them.
+
+    A friend's secret gift still withholds its text here — the owner did not
+    write it and must not read it before opening.
+    """
+    is_opened = receptacle.state is ReceptacleState.OPENED
+    hide_text = receptacle.is_secret and not is_opened
+    return {
+        "text": None if hide_text else receptacle.reward_text,
+        "is_secret": receptacle.is_secret,
+        "friend_name": receptacle.friend_name,
+        "created_at": receptacle.created_at,
+        "is_opened": is_opened,
+    }
 
 
 # --- response schemas (documentation for /api/docs) ---
@@ -185,18 +224,37 @@ class ReceptacleResponseSerializer(serializers.Serializer):
     state = serializers.CharField()
     virtue = serializers.CharField()
     rarity = serializers.CharField()
-    value = serializers.IntegerField()
     is_generated = serializers.BooleanField()
     is_secret = serializers.BooleanField()
     friend_name = serializers.CharField(allow_null=True)
     created_at = serializers.DateTimeField()
     opened_at = serializers.DateTimeField(allow_null=True)
     key_needed = KeyRequirementSerializer()
-    reward_text = serializers.CharField(
-        allow_null=True,
-        help_text="Null while a secret gift is unopened — the server withholds it.",
+    value = serializers.IntegerField(
+        allow_null=True, help_text="Null until opened — it describes the contents."
     )
-    content = GeneratedContentSerializer(required=False, allow_null=True)
+    reward_text = serializers.CharField(
+        allow_null=True, help_text="Null until opened. The whole point is not knowing."
+    )
+    content = GeneratedContentSerializer(
+        required=False, allow_null=True, help_text="Generated contents; null until opened."
+    )
+
+
+class RewardResponseSerializer(serializers.Serializer):
+    """A reward on the admin page. Deliberately says nothing about receptacles."""
+
+    text = serializers.CharField(
+        allow_null=True, help_text="Null for a friend's secret gift until it is opened."
+    )
+    is_secret = serializers.BooleanField()
+    friend_name = serializers.CharField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    is_opened = serializers.BooleanField()
+
+
+class RewardListResponseSerializer(serializers.Serializer):
+    rewards = RewardResponseSerializer(many=True)
 
 
 class ReceptacleListResponseSerializer(serializers.Serializer):

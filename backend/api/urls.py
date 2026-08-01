@@ -14,7 +14,7 @@ from api.views.friends import (
     TrialSessionView,
 )
 from api.views.health import HealthView
-from api.views.rewards import ReceptacleListView, RewardCreateView
+from api.views.rewards import ReceptacleListView, RewardView
 from api.views.stats import StatsView
 from api.views.tasks import TaskListCreateView
 from api.views.treasures import (
@@ -34,7 +34,7 @@ urlpatterns = [
     path("collectables/harmony", HarmonyMergeView.as_view(), name="collectables-harmony"),
     path("collectables/combine", CombineView.as_view(), name="collectables-combine"),
     path("collectables/sell", SellView.as_view(), name="collectables-sell"),
-    path("rewards", RewardCreateView.as_view(), name="rewards"),
+    path("rewards", RewardView.as_view(), name="rewards"),
     path("receptacles", ReceptacleListView.as_view(), name="receptacles"),
     path(
         "receptacles/<str:receptacle_id>/open",

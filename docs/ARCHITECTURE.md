@@ -101,7 +101,13 @@ content: {kind: GeneratedKind, title, url, author, text} | None   # generated on
 treasure_id: str | None         # set while IN_TREASURE
 created_at, opened_at
 ```
-Privacy rule: for `is_secret=True` receptacles not yet OPENED, the API never returns `reward_text` (it exists only in DB).
+**Privacy rule — the reward↔receptacle link is broken in both directions.**
+
+A receptacle that is not OPENED returns only what is needed to open it (`virtue`, `rarity`, `key_needed`) and nothing about its contents: `reward_text`, `value` and `content` are all `null`. This applies to rewards the owner wrote themselves, not just secret gifts — rarity is apportioned by value (§7.4), so a visible reward beside a visible rarity would rank the owner's entire wishlist and leave nothing to find out on opening.
+
+The rewards list (`GET /api/rewards`, the admin page) is the exact mirror: it carries the text and **no** `virtue`, `rarity`, `value` or receptacle id. `POST /api/rewards` likewise answers with the reward, not the receptacle it became.
+
+Both halves are load-bearing. Sealing one alone achieves nothing, because whichever endpoint stays open re-joins the pair. A friend's secret gift is withheld on the admin side too — the owner did not write it, so they must not read it early.
 
 **Treasure** — `id, slot:int(0-2), receptacle_ids:[str], pity: {VAULT:int, SANCTUM:int}, created_at`. Pity is **per treasure** and dies with it (owner's explicit choice).
 

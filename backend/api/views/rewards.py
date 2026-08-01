@@ -7,18 +7,37 @@ from rest_framework.views import APIView
 from api.serializers import (
     ErrorResponseSerializer,
     ReceptacleListResponseSerializer,
-    ReceptacleResponseSerializer,
     RewardCreateRequestSerializer,
+    RewardListResponseSerializer,
+    RewardResponseSerializer,
     serialize_receptacle,
+    serialize_reward,
 )
 from core.enums import ReceptacleState
 from core.errors import AIResponseInvalid
 
 
-class RewardCreateView(APIView):
+class RewardView(APIView):
+    """Rewards as their author sees them.
+
+    Both directions deliberately say nothing about receptacles: which one a
+    reward was sealed into is the surprise. `GET /api/receptacles` is the
+    mirror image — receptacles without their contents.
+    """
+
+    @extend_schema(responses={200: RewardListResponseSerializer})
+    def get(self, request: Request) -> Response:
+        receptacles = request.game_context.repos.receptacles.list_non_generated()
+        receptacles.sort(key=lambda r: r.created_at, reverse=True)
+        return Response({"rewards": [serialize_reward(r) for r in receptacles]})
+
     @extend_schema(
         request=RewardCreateRequestSerializer,
-        responses={200: ReceptacleResponseSerializer, 502: ErrorResponseSerializer},
+        responses={200: RewardResponseSerializer, 502: ErrorResponseSerializer},
+        description=(
+            "Seal a reward into a receptacle. The response deliberately does not say "
+            "which receptacle it became — that is the surprise."
+        ),
     )
     def post(self, request: Request) -> Response:
         serializer = RewardCreateRequestSerializer(data=request.data)
@@ -37,7 +56,7 @@ class RewardCreateView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        return Response(serialize_receptacle(receptacle))
+        return Response(serialize_reward(receptacle))
 
 
 class ReceptacleListView(APIView):

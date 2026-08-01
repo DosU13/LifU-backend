@@ -8,6 +8,7 @@ import type {
   OpenResult,
   Receptacle,
   ReceptacleState,
+  Reward,
   SessionInfo,
   Stats,
   Stocks,
@@ -157,11 +158,13 @@ export const api = {
     }),
 
   // --- rewards and receptacles ---
+  // Answers with the reward, never the receptacle it was sealed into.
   submitReward: (text: string, isSecret = false, friendName?: string) =>
-    request<Receptacle>('/rewards', {
+    request<Reward>('/rewards', {
       method: 'POST',
       body: { text, is_secret: isSecret, ...(friendName ? { friend_name: friendName } : {}) },
     }),
+  listRewards: () => request<{ rewards: Reward[] }>('/rewards'),
   listReceptacles: (state: ReceptacleState = 'DROPPED') =>
     request<{ receptacles: Receptacle[] }>(`/receptacles?state=${state}`),
   openReceptacle: (id: string) =>

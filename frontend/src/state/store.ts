@@ -180,12 +180,11 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     submitReward: async (text, isSecret, friendName) => {
       try {
-        const receptacle = await api.submitReward(text, isSecret, friendName)
+        await api.submitReward(text, isSecret, friendName)
         await get().refreshTreasures()
-        report(
-          'success',
-          `Stored a ${receptacle.rarity.toLowerCase()} of ${receptacle.virtue.toLowerCase()}.`,
-        )
+        // Deliberately vague: naming the receptacle here would give away which
+        // one holds this reward, which is the whole thing being protected.
+        report('success', 'Sealed away. You will find out which one when it opens.')
         return true
       } catch (error) {
         report('error', describe(error, 'Could not store that reward.'))

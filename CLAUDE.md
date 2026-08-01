@@ -25,7 +25,13 @@ Frontend (run from `frontend/`):
 3. Every tunable number lives in `core/constants.py`. No magic numbers in services.
 4. All randomness goes through the injected `Rng` — never call `random` module functions directly in services (tests inject `SeededRng`).
 5. API views are thin: deserialize → call one service method → serialize. No game logic in views or serializers.
-6. Never return `reward_text` of an unopened secret receptacle from any endpoint.
+6. **The reward↔receptacle link stays broken in both directions.** A receptacle
+   never returns what is inside it (`reward_text`, `value`, `content`) until it
+   is OPENED — including rewards the owner wrote themselves, since rarity is
+   apportioned by value and the pair would rank their whole wishlist. The
+   rewards list is the mirror: text yes, receptacle identity never. Sealing one
+   side alone is worthless — whichever endpoint stays open rejoins the pair.
+   Guarded by `tests/api/test_privacy.py`; add to it, don't work around it.
 7. Tests: every service method gets unit tests with memory repos + `FakeAIClient` + `SeededRng`; every endpoint gets at least one happy-path and one error-path API test. New logic without tests is an unfinished phase.
 8. AI responses are validated/clamped/retried per ARCHITECTURE §8; on failure return 502 — never fabricate values.
 9. Python: type hints everywhere, dataclasses for entities, ruff clean. TypeScript: strict mode, no `any` in `frontend/src/state` or `frontend/src/api.ts`.
