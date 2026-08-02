@@ -1,0 +1,14 @@
+{
+  // Worker name from the dashboard's default "Hello World" template — reused
+  // rather than creating a second Worker, since it already exists.
+  "name": "lifu-frontend",
+  "compatibility_date": "2025-09-01",
+  // Workers Static Assets: serves the Vite build directly, no worker script
+  // needed. SPA fallback so client-side routing (friend links, /admin) works
+  // on a hard refresh instead of 404ing.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "lifu.doslan.com", "custom_domain": true }]
+}
