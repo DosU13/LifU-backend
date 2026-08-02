@@ -1,5 +1,5 @@
 # Runs the backend in production mode: DEBUG off, hosts locked to
-# api.lifu.doslan.com, served by waitress instead of manage.py runserver.
+# lifu-api.doslan.com, served by waitress instead of manage.py runserver.
 #
 # These overrides are scoped to this process only — they never touch the
 # persistent environment, so a normal dev `manage.py runserver` elsewhere on
@@ -18,7 +18,7 @@ if (-not $env:DJANGO_SECRET_KEY_PROD) {
 
 $env:DJANGO_SECRET_KEY = $env:DJANGO_SECRET_KEY_PROD
 $env:DJANGO_DEBUG = "false"
-$env:DJANGO_ALLOWED_HOSTS = "api.lifu.doslan.com"
+$env:DJANGO_ALLOWED_HOSTS = "lifu-api.doslan.com"
 $env:CORS_ALLOWED_ORIGINS = "https://lifu.doslan.com"
 
 Set-Location $PSScriptRoot

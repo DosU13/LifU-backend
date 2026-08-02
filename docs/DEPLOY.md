@@ -8,12 +8,22 @@ is split:
 | Piece | Where | Why |
 |---|---|---|
 | Frontend (static build) | Cloudflare Pages, `lifu.doslan.com` | Cloudflare's actual job: a CDN for the built SPA |
-| Backend (Django) | This machine, `api.lifu.doslan.com` via Cloudflare Tunnel | Keeps the local-SQLite latency win (§6, ARCHITECTURE.md) that was the whole reason to move off Firestore |
+| Backend (Django) | This machine, `lifu-api.doslan.com` via Cloudflare Tunnel | Keeps the local-SQLite latency win (§6, ARCHITECTURE.md) that was the whole reason to move off Firestore |
+
+The API hostname is `lifu-api.doslan.com` — a first-level subdomain of
+`doslan.com` — not `api.lifu.doslan.com`. Cloudflare's automatic Universal
+SSL certificate only covers the zone apex and one level of wildcard
+(`doslan.com` + `*.doslan.com`); a second-level name like
+`api.lifu.doslan.com` gets no certificate and the TLS handshake fails outright
+(confirmed while setting this up — `openssl s_client` returned "handshake
+failure" for the two-level name and a valid cert for the one-level name).
+Total TLS (Cloudflare's paid-tier-adjacent feature for arbitrary subdomain
+depth) would also fix it, but the flat name needs nothing extra.
 
 The frontend calls the API cross-origin (`VITE_API_BASE_URL`), which is
 already accounted for: `CORS_ALLOWED_ORIGINS` and `django-cors-headers` were
 wired up when `FRIEND_LINK_BASE_URL` was added. `lifu.doslan.com` and
-`api.lifu.doslan.com` share `doslan.com` as their registrable domain, so the
+`lifu-api.doslan.com` share `doslan.com` as their registrable domain, so the
 `SESSION_COOKIE_SAMESITE = "Lax"` cookie already in use works across the two
 subdomains without change.
 
@@ -28,7 +38,7 @@ In the real `backend/.env` (never committed):
 ```
 DJANGO_SECRET_KEY=<run: python -c "import secrets; print(secrets.token_urlsafe(50))">
 DJANGO_DEBUG=false
-DJANGO_ALLOWED_HOSTS=api.lifu.doslan.com
+DJANGO_ALLOWED_HOSTS=lifu-api.doslan.com
 CORS_ALLOWED_ORIGINS=https://lifu.doslan.com
 OWNER_PASSWORD=<pick a real one>
 REPO_BACKEND=sqlite
@@ -62,22 +72,26 @@ once:
 [Environment]::SetEnvironmentVariable("DJANGO_SECRET_KEY_PROD", "<run: python -c 'import secrets; print(secrets.token_urlsafe(50))'>", "User")
 ```
 
+Note this only takes effect in *new* shells/processes started after you set
+it — a shell that was already open (or a background task started earlier in
+the same session) won't see it until restarted.
+
 It serves on **port 8001**, not 8000 — 8000 is this machine's usual
 `manage.py runserver` dev port, kept free so dev and prod can run side by
 side. Bound to `127.0.0.1` on purpose: reachable only via the tunnel or this
 machine, never the LAN.
 
 To survive reboots/logouts, wrap that command in a Windows Scheduled Task
-("run at log on", `waitress-serve.exe` as the action) or install it as a
-service with [NSSM](https://nssm.cc/) if you want proper start/stop control.
+("run at log on", `run_prod.ps1` as the action) or install it as a service
+with [NSSM](https://nssm.cc/) if you want proper start/stop control.
 
-## 3. Cloudflare Tunnel: expose the backend as api.lifu.doslan.com
+## 3. Cloudflare Tunnel: expose the backend as lifu-api.doslan.com
 
 ```bash
 winget install --id Cloudflare.cloudflared
 cloudflared tunnel login          # opens your browser, pick the doslan.com zone
 cloudflared tunnel create lifu-backend
-cloudflared tunnel route dns lifu-backend api.lifu.doslan.com
+cloudflared tunnel route dns lifu-backend lifu-api.doslan.com
 ```
 
 Then `%USERPROFILE%\.cloudflared\config.yml`:
@@ -86,7 +100,7 @@ Then `%USERPROFILE%\.cloudflared\config.yml`:
 tunnel: <TUNNEL_ID from `tunnel create`>
 credentials-file: C:\Users\<you>\.cloudflared\<TUNNEL_ID>.json
 ingress:
-  - hostname: api.lifu.doslan.com
+  - hostname: lifu-api.doslan.com
     service: http://localhost:8001
   - service: http_status:404
 ```
@@ -103,9 +117,11 @@ Once confirmed, install it as a Windows service so it starts on boot:
 cloudflared service install
 ```
 
-Verify: `curl https://api.lifu.doslan.com/api/health` from any machine
-should return the health check — with waitress running locally in another
-window.
+Verify: `curl https://lifu-api.doslan.com/api/health` from any machine
+should return `{"ok":true}` — with `run_prod.ps1` running locally in another
+window. Give the DNS record a few minutes after first creating it before
+concluding something's wrong — edge certificate issuance for a brand new
+hostname isn't instant.
 
 ## 4. Cloudflare Pages: the frontend
 
@@ -119,7 +135,7 @@ Git-connected (recommended — every push to `main` redeploys automatically):
    - Output directory: `dist`
 3. Custom domains → add `lifu.doslan.com`.
 4. Settings → Environment variables (Production) → add
-   `VITE_API_BASE_URL` = `https://api.lifu.doslan.com`.
+   `VITE_API_BASE_URL` = `https://lifu-api.doslan.com`.
 
 `frontend/.env.production` sets the same thing for local `npm run build`
 runs, but it's covered by `.gitignore`'s `.env.*` rule like the rest of the
@@ -138,7 +154,7 @@ npx wrangler pages deploy dist --project-name=lifu
 
 ## 5. Verify
 
-- `https://api.lifu.doslan.com/api/health` — backend reachable through the tunnel.
+- `https://lifu-api.doslan.com/api/health` — backend reachable through the tunnel.
 - `https://lifu.doslan.com` — frontend loads, login gate appears.
 - Log in, complete a task, check the session cookie persists (owner login
   should survive a reload — that's the Lax-cross-subdomain cookie working).
