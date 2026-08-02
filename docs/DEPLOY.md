@@ -11,14 +11,21 @@ is split:
 | Backend (Django) | This machine, `lifu-api.doslan.com` via Cloudflare Tunnel | Keeps the local-SQLite latency win (§6, ARCHITECTURE.md) that was the whole reason to move off Firestore |
 
 Both processes — the tunnel and the backend — run as **Scheduled Tasks**
-under this Windows account, started at logon (see §3). Not a Windows
-service: `cloudflared service install` runs as `LocalSystem`, whose default
-config path (`%USERPROFILE%\.cloudflared\`) resolves to a different,
-nonexistent profile than the one the tunnel was created under, and there's
-no `--config` flag on `service install` to point it elsewhere. A logon
-Scheduled Task runs as the actual user, so it just works with the config
-already on disk. Downside worth knowing: it starts at *login*, not at power-on
-— fine for a machine you log into.
+under this Windows account, triggered **at system startup** (see §3). Not a
+Windows service: `cloudflared service install` runs as `LocalSystem`, whose
+default config path (`%USERPROFILE%\.cloudflared\`) resolves to a different,
+nonexistent profile than the one the tunnel was created under, and there's no
+`--config` flag on `service install` to point it elsewhere. Not an "at logon"
+trigger either, even though that's where this started: it only fires for a
+real interactive desktop logon, and remote/automation access to this machine
+doesn't count as one — after the process died once, nothing brought it back
+because Windows never considered anyone "logged on." An `AtStartup` trigger
+combined with an `S4U` logon (runs as this user, without storing the account
+password anywhere) fires at boot regardless, and still has this user's
+profile and environment variables. `backend/setup-autostart.ps1` sets this
+up in one shot (§3) — it needs to run elevated, which isn't something this
+assistant can reliably do unattended (Windows' UAC prompt has no one to click
+"Yes" when nobody's watching), so it's written to be run by hand once.
 
 The API hostname is `lifu-api.doslan.com` — a first-level subdomain of
 `doslan.com` — not `api.lifu.doslan.com`. Cloudflare's automatic Universal
@@ -40,9 +47,9 @@ subdomains without change. It will **not** work from the Worker's raw
 in `CORS_ALLOWED_ORIGINS`, so the browser blocks the request outright. Always
 test against `lifu.doslan.com`.
 
-Trade-off worth knowing: the game is only reachable while this machine is on
-and logged in. Friend links break otherwise. Fine for a single-owner
-project; revisit if that stops being true.
+Trade-off worth knowing: the game is only reachable while this machine is on.
+Friend links break otherwise. Fine for a single-owner project; revisit if
+that stops being true.
 
 ## 1. Backend: production settings
 
@@ -95,23 +102,22 @@ machine, never the LAN.
 
 ## 3. Auto-start: Scheduled Tasks for both processes
 
-Two tasks, both triggered "at log on" for this user, both already set up:
+One-time setup, from an **Administrator** PowerShell (registering an
+`AtStartup` trigger needs elevation; a plain `AtLogOn` one doesn't, which is
+how this went sideways the first time — see above):
 
 ```powershell
-# Backend
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-NoProfile -ExecutionPolicy Bypass -File "D:\Doslan\Desktop\LifU\backend\run_prod.ps1"'
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
-Register-ScheduledTask -TaskName "LifU-Backend" -Action $action -Trigger $trigger -Settings $settings -Force
-
-# Tunnel
-$action = New-ScheduledTaskAction -Execute "C:\Program Files (x86)\cloudflared\cloudflared.exe" -Argument "tunnel run lifu-backend"
-$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName "LifU-Tunnel" -Action $action -Trigger $trigger -Settings $settings -Force
+cd D:\Doslan\Desktop\LifU\backend
+.\setup-autostart.ps1
 ```
 
-To start both right now without logging off/on: `Start-ScheduledTask -TaskName
+This registers both `LifU-Backend` and `LifU-Tunnel` as Scheduled Tasks
+(`AtStartup` trigger, `S4U` logon as this user, auto-restart up to 5 times on
+crash), then starts them immediately and runs a health check so you don't
+have to reboot to find out if it worked. Safe to re-run any time — `-Force`
+overwrites the existing registration.
+
+To start both right now without a reboot: `Start-ScheduledTask -TaskName
 "LifU-Backend"` and `... "LifU-Tunnel"`. To check they're actually up:
 `Get-NetTCPConnection -LocalPort 8001` should show waitress listening, and
 `curl https://lifu-api.doslan.com/api/health` should return `{"ok":true}`.
@@ -119,6 +125,12 @@ To start both right now without logging off/on: `Start-ScheduledTask -TaskName
 If you ever start the backend manually while the Scheduled Task is also
 running, you'll get a silent port-8001 conflict — one instance wins the bind,
 the other exits. Stop one before starting the other by hand.
+
+If both tasks are `Running` but the health check still fails, check
+`Microsoft-Windows-TaskScheduler/Operational` in Event Viewer (enable it
+first if needed: `wevtutil sl Microsoft-Windows-TaskScheduler/Operational
+/e:true`, elevated) — it'll show whether the task actually launched the
+process or was blocked.
 
 Give the tunnel's DNS record a few minutes after first creating a hostname
 before concluding something's wrong — edge certificate issuance for a brand
