@@ -103,9 +103,23 @@ describe('the bench', () => {
     useGameStore.setState({ stocks: { [stockKey('FIRE', 'FRAGMENT')]: 9 } })
     render(<Vault />)
 
-    await userEvent.click(screen.getByRole('button', { name: /fire fragment/i }))
+    // Two of a kind can't merge (needs three) and isn't a lone item either —
+    // that's the case that should still explain itself.
+    const fire = screen.getByRole('button', { name: /fire fragment/i })
+    await userEvent.click(fire)
+    await userEvent.click(fire)
 
     expect(screen.getByText(/three of the same/i)).toBeInTheDocument()
+  })
+
+  it('offers to sell an exact count when only one item is on the bench', async () => {
+    useGameStore.setState({ stocks: { [stockKey('FIRE', 'FRAGMENT')]: 9 } })
+    render(<Vault />)
+
+    await userEvent.click(screen.getByRole('button', { name: /fire fragment/i }))
+
+    expect(screen.getByRole('button', { name: /sell for 1/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/how many to sell \(up to 9\)/i)).toBeInTheDocument()
   })
 
   it('offers a quantity only when more than one run is possible', async () => {

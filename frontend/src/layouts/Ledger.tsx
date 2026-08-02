@@ -24,6 +24,12 @@ const GREETINGS = [
 const FIRST_PAGE = 4
 const EXPANDED = 14
 
+// The API lists tasks oldest-first (it's a time-range query); the Ledger is a
+// feed, so the newest thing you did belongs at the top.
+function newestFirst(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
+
 export function Ledger() {
   const completeTask = useGameStore((s) => s.completeTask)
   const stats = useGameStore((s) => s.stats)
@@ -43,7 +49,7 @@ export function Ledger() {
   useEffect(() => {
     void api
       .listTasks()
-      .then(({ tasks: list }) => setTasks(list))
+      .then(({ tasks: list }) => setTasks(newestFirst(list)))
       .catch(() => setTasks([]))
   }, [])
 
@@ -74,7 +80,7 @@ export function Ledger() {
 
     void api
       .listTasks()
-      .then(({ tasks: list }) => setTasks(list))
+      .then(({ tasks: list }) => setTasks(newestFirst(list)))
       .catch(() => undefined)
   }
 

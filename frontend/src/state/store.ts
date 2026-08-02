@@ -6,6 +6,7 @@ import type {
   CollectableRarity,
   Element,
   GameState,
+  HarmonyResult,
   OpenResult,
   Receptacle,
   Stocks,
@@ -50,13 +51,15 @@ export interface GameStore {
   completeTask: (text: string) => Promise<TaskCompletion | null>
   submitReward: (text: string, isSecret: boolean, friendName?: string) => Promise<boolean>
   mergeUp: (element: Element, rarity: CollectableRarity) => Promise<boolean>
-  mergeHarmony: (rarity: CollectableRarity) => Promise<boolean>
+  /** Resolves to the server's yield/extras so the caller can animate the real count. */
+  mergeHarmony: (rarity: CollectableRarity) => Promise<HarmonyResult | null>
   combine: (a: Element, b: Element, rarity: CollectableRarity) => Promise<boolean>
   sell: (element: Element, rarity: CollectableRarity, count: number) => Promise<boolean>
   /** Resolves to the server's result so the caller can animate the real drop. */
   buyTreasure: (id: string) => Promise<BuyResult | null>
   discardTreasure: (id: string) => Promise<boolean>
-  openReceptacle: (id: string) => Promise<boolean>
+  /** Resolves to the now-unsealed receptacle so the caller can reveal what was inside. */
+  openReceptacle: (id: string) => Promise<OpenResult | null>
 }
 
 const emptyState = {
@@ -195,10 +198,10 @@ export const useGameStore = create<GameStore>((set, get) => {
             ? `${result.yield} harmony — ${result.extras} extra from the build-up!`
             : `${result.yield} harmony.`,
         )
-        return true
+        return result
       } catch (error) {
         report('error', describe(error, 'Could not perform the harmony merge.'))
-        return false
+        return null
       }
     },
 
@@ -269,10 +272,10 @@ export const useGameStore = create<GameStore>((set, get) => {
         const { stocks } = await api.collectables()
         set({ stocks })
         report('success', `Opened — ${result.coins_gained} coins inside.`)
-        return true
+        return result
       } catch (error) {
         report('error', describe(error, 'Could not open that.'))
-        return false
+        return null
       }
     },
   }

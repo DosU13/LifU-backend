@@ -108,6 +108,51 @@
 .slots .placeholder { color: var(--faint); font-size: 13.5px; }
 .slots .item { width: 62px; }
 
+.slots.drag-over {
+  border-color: rgba(245, 193, 74, 0.7);
+  background: rgba(245, 193, 74, 0.08);
+}
+
+.sell-btn {
+  border-color: rgba(224, 87, 79, 0.35);
+  color: #e2948e;
+}
+.sell-btn:hover:not(:disabled) {
+  border-color: rgba(224, 87, 79, 0.6);
+  background: rgba(224, 87, 79, 0.08);
+}
+
+/* --- opened receptacles: a quiet record, not something to act on --- */
+
+.opened-list { display: flex; flex-direction: column; gap: 4px; }
+
+.opened-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  transition: background var(--beat-fast), border-color var(--beat-fast);
+}
+.opened-row:hover { background: rgba(255, 255, 255, 0.05); border-color: var(--line); }
+.opened-row img { flex-shrink: 0; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5)) grayscale(0.15); }
+
+.opened-info { min-width: 0; }
+
+.opened-title { font-size: 13px; color: #cfc4dc; }
+
+.opened-text {
+  font-size: 12.5px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .qty {
   width: 74px;
   padding: 12px;

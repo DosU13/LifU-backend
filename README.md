@@ -102,9 +102,10 @@ frontend/
   src/ui/      the deck/shell primitives: Icon, Overlay, tokens shared across layouts
   src/state/   Zustand store and session
   src/         typed API client and routing
-docs/          SPEC, ARCHITECTURE, PLAN, AI_PROMPTS, ICON_PROMPTS
+docs/          SPEC, ARCHITECTURE, PLAN, DEPLOY, AI_PROMPTS, ICON_PROMPTS
 tools/icongen/ local FLUX.1-dev pipeline that generated the 156 game icons
 ```
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) is the source of truth for the
-rules and formulas; [CLAUDE.md](CLAUDE.md) has the repo conventions.
+rules and formulas; [CLAUDE.md](CLAUDE.md) has the repo conventions;
+[docs/DEPLOY.md](docs/DEPLOY.md) covers running this at lifu.doslan.com.

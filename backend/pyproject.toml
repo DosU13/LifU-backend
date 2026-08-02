@@ -20,6 +20,12 @@ dev = [
     "pytest-django>=4.8,<5.0",
     "ruff>=0.6,<1.0",
 ]
+# manage.py runserver is dev-only. waitress is a pure-Python WSGI server that
+# works on Windows without fork() (gunicorn does not), which is what the
+# owner's machine actually is — see docs/DEPLOY.md.
+prod = [
+    "waitress>=3.0,<4.0",
+]
 
 [tool.setuptools]
 packages = ["lifu", "api", "core", "repos", "services", "aiclients", "providers"]

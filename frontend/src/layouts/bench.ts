@@ -19,9 +19,24 @@ export type BenchItem =
   | { type: 'receptacle'; receptacle: Receptacle }
 
 export type BenchOp =
-  | { kind: 'merge'; label: string; element: Element; rarity: CollectableRarity }
+  | {
+      kind: 'merge'
+      label: string
+      element: Element
+      rarity: CollectableRarity
+      /** The rarity this produces — the caller needs it too, to animate the result. */
+      to: CollectableRarity
+    }
   | { kind: 'harmony'; label: string; rarity: CollectableRarity }
-  | { kind: 'combine'; label: string; a: Element; b: Element; rarity: CollectableRarity }
+  | {
+      kind: 'combine'
+      label: string
+      a: Element
+      b: Element
+      rarity: CollectableRarity
+      /** The combined element this produces. */
+      result: Element
+    }
   | { kind: 'open'; label: string; receptacle: Receptacle }
   | { kind: 'blocked'; label: string; reason: string }
 
@@ -87,6 +102,7 @@ export function detectOp(items: BenchItem[], stocks: Stocks): BenchOp {
       label: `Merge up → ${label(element)} ${label(next)}`,
       element,
       rarity,
+      to: next,
     }
   }
 
@@ -121,6 +137,7 @@ export function detectOp(items: BenchItem[], stocks: Stocks): BenchOp {
       a,
       b,
       rarity,
+      result: pair.result,
     }
   }
 

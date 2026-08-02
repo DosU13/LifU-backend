@@ -33,18 +33,22 @@ describe('Ledger', () => {
     expect(await screen.findByText(/nothing logged yet/i)).toBeInTheDocument()
   })
 
-  it('shows four tasks, then expands on "more"', async () => {
-    const tasks = Array.from({ length: 9 }, (_, i) => task(`t${i}`))
+  it('shows four tasks newest-first, then expands on "more"', async () => {
+    // Strictly increasing timestamps: t0 logged first, t8 logged last.
+    const tasks = Array.from({ length: 9 }, (_, i) =>
+      task(`t${i}`, { created_at: new Date(2026, 0, 1, 0, 0, i).toISOString() }),
+    )
     vi.spyOn(api, 'listTasks').mockResolvedValue({ tasks })
 
     render(<Ledger />)
 
-    await waitFor(() => expect(screen.getByText('did thing t0')).toBeInTheDocument())
-    expect(screen.queryByText('did thing t4')).not.toBeInTheDocument()
+    // The most recently logged thing (t8) belongs at the top of the feed.
+    await waitFor(() => expect(screen.getByText('did thing t8')).toBeInTheDocument())
+    expect(screen.queryByText('did thing t0')).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /more/i }))
 
-    expect(screen.getByText('did thing t8')).toBeInTheDocument()
+    expect(screen.getByText('did thing t0')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /more/i })).not.toBeInTheDocument()
   })
 

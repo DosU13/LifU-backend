@@ -22,6 +22,12 @@ export function receptacleIcon(virtue: Virtue, rarity: ReceptacleRarity): string
   return `${RECEPTACLES}/${virtue.toLowerCase()}_${rarity.toLowerCase()}.png`
 }
 
+/** The one dedicated treasure-chest icon — a slot isn't any one virtue or
+ * rarity until you buy it, so it never borrows receptacle art. */
+export function treasureIcon(): string {
+  return '/icons/misc/treasure_chest.png'
+}
+
 /** From a backend stock key such as "FIRE_SHARD". */
 export function iconForStockKey(key: string): string {
   return `${COLLECTABLES}/${key.toLowerCase()}.png`

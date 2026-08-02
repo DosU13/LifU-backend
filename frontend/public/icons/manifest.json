@@ -1870,5 +1870,17 @@
     "guidance": 3.5,
     "quant": "Q3_K_S",
     "seconds": 91.8
+  },
+  "treasure_chest": {
+    "name": "treasure_chest",
+    "category": "misc",
+    "prompt": "Game inventory icon, painted 3D-render style with a clean readable silhouette. Semi-realistic fantasy materials, stone and metal and glass and contained energy. Single light source from the upper left, soft ambient bounce, subtle rim light. Rich saturated colour, deep contrast, no outlines, no cel shading. One single object, centred, three-quarter view, floating with no ground plane and no cast shadow. An ornate overflowing treasure chest of dark aged wood bound in gold, its lid thrown open, spilling a rich pile of gold coins, cut gems in many colours, and jewelled trinkets over its front edge. Lush and abundant and purely inviting -- this is the promise of a prize in general, not any one specific reward. The background is a completely flat solid magenta field, uniform, with no gradient and no texture and no shadow. Square image. There is no text anywhere in the image, no letters, no numbers, no words, no watermark, no signature, no border, no frame, no user interface.",
+    "clip_prompt": "an open treasure chest overflowing with gold coins and gems, ornate dark wood and gold banding, fantasy game icon, painted 3D render, centred on a flat magenta background",
+    "seed": 2138877978,
+    "size": 768,
+    "steps": 28,
+    "guidance": 3.5,
+    "quant": "Q3_K_S",
+    "seconds": 98.9
   }
 }

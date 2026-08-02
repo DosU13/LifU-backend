@@ -130,6 +130,15 @@
   margin: 16px 0 20px;
 }
 
+.detail-card .legend {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b3a2c4;
+  margin: -8px 0 20px;
+}
+
 .keyline {
   display: flex;
   align-items: center;

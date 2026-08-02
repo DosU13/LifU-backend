@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import { label } from '../domain'
 import { useGameStore } from '../state/store'
-import { collectableIcon, receptacleIcon } from '../ui/Icon'
-import { Reveal } from '../ui/Overlay'
+import { collectableIcon, receptacleIcon, treasureIcon } from '../ui/Icon'
+import { Modal, Reveal } from '../ui/Overlay'
 import { useReveal } from '../ui/useReveal'
 import { planElimination } from './elimination'
 import type { Treasure, TreasureContentPreview } from '../types'
@@ -34,6 +34,7 @@ export function Treasury() {
 
   const [sequence, setSequence] = useState<Sequence | null>(null)
   const [busy, setBusy] = useState(false)
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const reveal = useReveal()
   const timers = useRef<number[]>([])
 
@@ -111,6 +112,12 @@ export function Treasury() {
     setSequence(null)
   }
 
+  async function confirmDiscard() {
+    if (!selected) return
+    setConfirmingDiscard(false)
+    await discardTreasure(selected.id)
+  }
+
   const tooPoor = selected !== null && coins < selected.price
 
   return (
@@ -181,7 +188,7 @@ export function Treasury() {
               <button
                 type="button"
                 className="btn-ghost"
-                onClick={() => void discardTreasure(selected.id)}
+                onClick={() => setConfirmingDiscard(true)}
                 title="Once a day, send a treasure's contents back to the pool"
               >
                 Let it go
@@ -190,6 +197,31 @@ export function Treasury() {
           )
         )}
       </div>
+
+      {confirmingDiscard && selected && (
+        <Modal onClose={() => setConfirmingDiscard(false)} labelledBy="discard-title">
+          <div className="detail-card">
+            <h2 id="discard-title">Let this treasure go?</h2>
+            <p className="desc">
+              Everything sealed inside goes back to the pool — {selected.contents.length}{' '}
+              receptacle{selected.contents.length === 1 ? '' : 's'} — and a new treasure takes
+              the slot. This can only be undone once a day, across all three slots.
+            </p>
+            <div className="detail-actions">
+              <button type="button" className="btn-primary" onClick={() => void confirmDiscard()}>
+                Yes, let it go
+              </button>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setConfirmingDiscard(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {reveal.showing && (
         <Reveal
@@ -214,9 +246,6 @@ function TreasureCard({
   disabled: boolean
   onSelect: () => void
 }) {
-  // Something from the middle of the pile, purely as a thumbnail.
-  const face = treasure.contents[Math.floor(treasure.contents.length / 2)]
-
   return (
     <button
       type="button"
@@ -226,11 +255,7 @@ function TreasureCard({
       aria-pressed={selected}
       aria-label={`Treasure in slot ${treasure.slot + 1}, ${treasure.price} coins, ${treasure.contents.length} sealed`}
     >
-      {face ? (
-        <img src={receptacleIcon(face.virtue, face.rarity)} width={52} height={52} alt="" />
-      ) : (
-        <div className="chest-blank" />
-      )}
+      <img src={treasureIcon()} width={52} height={52} alt="" />
       <span className="cprice">
         <img src={collectableIcon('SUN', 'FRAGMENT')} width={13} height={13} alt="" />
         {/* The server's fixed price. It is set when the treasure is generated and

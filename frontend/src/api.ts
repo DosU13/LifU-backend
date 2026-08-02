@@ -42,6 +42,14 @@ export class ApiError extends Error {
 }
 
 /**
+ * The API's origin in production (e.g. "https://api.lifu.doslan.com"), where
+ * the frontend and API are served from different subdomains. Empty in dev,
+ * where Vite proxies /api to the local backend same-origin — see
+ * vite.config.ts.
+ */
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+
+/**
  * Held in memory only, never persisted. A trial is meant to be a place to
  * poke at the mechanics — reloading the page starts a fresh one rather than
  * resuming, which is exactly what a sandbox should do.
@@ -105,7 +113,7 @@ async function request<T>(
   }
   if (options.body !== undefined) init.body = JSON.stringify(options.body)
 
-  const response = await fetch(`/api${path}`, init)
+  const response = await fetch(`${API_BASE}/api${path}`, init)
 
   let payload: unknown = null
   const text = await response.text()
