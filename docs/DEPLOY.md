@@ -112,10 +112,43 @@ cd D:\Doslan\Desktop\LifU\backend
 ```
 
 This registers both `LifU-Backend` and `LifU-Tunnel` as Scheduled Tasks
-(`AtStartup` trigger, `S4U` logon as this user, auto-restart up to 5 times on
-crash), then starts them immediately and runs a health check so you don't
-have to reboot to find out if it worked. Safe to re-run any time — `-Force`
-overwrites the existing registration.
+(`AtStartup` trigger, `S4U` logon as this user), then starts them immediately
+and runs a health check so you don't have to reboot to find out if it
+worked. Safe to re-run any time — `-Force` overwrites the existing
+registration. If a task is already running when you re-run it, Task
+Scheduler won't start a fresh instance under the new definition until the
+old one exits — kill it by hand first (`Get-Process cloudflared,python |
+Stop-Process -Force`) if you need to verify a change takes effect
+immediately rather than at next boot.
+
+`LifU-Tunnel`'s action is `run_tunnel.ps1`, not `cloudflared.exe` directly —
+found the hard way. Two things needed fixing after the first real reboot
+test:
+
+1. **Task Scheduler's `RestartOnFailure` setting doesn't cover a process
+   that launches fine and exits later** (only a task the engine couldn't
+   launch at all). At boot, cloudflared launched and then exited within ~8s
+   (`0x800700C1`) — almost certainly because the network stack wasn't fully
+   up that early — and nothing brought it back; it sat dead until manually
+   retriggered. `run_tunnel.ps1` actively waits for real connectivity
+   (`Test-Connection` to `1.1.1.1`) before the first launch attempt, and
+   retries its own launch loop (10 attempts, 10s apart) rather than relying
+   on Task Scheduler to notice.
+2. **Don't pipe a chatty native EXE's stderr through PowerShell's own
+   stream/redirection operators** (`*>>`, `2>&1`) when
+   `$ErrorActionPreference = "Stop"` is set. cloudflared logs every `INF`
+   line via stderr; merging that into PowerShell's error stream turns its
+   first ordinary log line into a terminating error, killing the wrapper
+   before it ever connects — which is exactly what happened on the first
+   version of this script (log showed "launching cloudflared" and then
+   nothing, with the wrapper itself dead). `Start-Process
+   -RedirectStandardOutput/-RedirectStandardError` writes to files via raw
+   OS-level redirection instead, sidestepping PowerShell's stream handling
+   entirely.
+
+Its own log lives at `logs/tunnel.log` (gitignored) — check that first if
+the tunnel won't come up; it records every launch attempt and exit code,
+independent of whatever Task Scheduler itself reports.
 
 To start both right now without a reboot: `Start-ScheduledTask -TaskName
 "LifU-Backend"` and `... "LifU-Tunnel"`. To check they're actually up:
@@ -130,7 +163,7 @@ If both tasks are `Running` but the health check still fails, check
 `Microsoft-Windows-TaskScheduler/Operational` in Event Viewer (enable it
 first if needed: `wevtutil sl Microsoft-Windows-TaskScheduler/Operational
 /e:true`, elevated) — it'll show whether the task actually launched the
-process or was blocked.
+process, and with what exit code, independent of `logs/tunnel.log`.
 
 Give the tunnel's DNS record a few minutes after first creating a hostname
 before concluding something's wrong — edge certificate issuance for a brand

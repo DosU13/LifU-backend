@@ -35,8 +35,14 @@ Register-ScheduledTask -TaskName "LifU-Backend" -Action $backendAction -Trigger 
     -Settings $backendSettings -Principal $principal -Force | Out-Null
 
 Write-Output "Registering LifU-Tunnel (at startup, user $user)..."
-$tunnelAction = New-ScheduledTaskAction -Execute "C:\Program Files (x86)\cloudflared\cloudflared.exe" `
-    -Argument "tunnel run lifu-backend"
+# Goes through run_tunnel.ps1, not cloudflared.exe directly: at boot, the
+# network stack isn't always up yet by the time this trigger fires, and
+# Task Scheduler's own RestartOnFailure setting does NOT cover "the process
+# launched fine and then exited a few seconds later" -- only "the task
+# engine couldn't launch it at all". The wrapper waits for real
+# connectivity and retries the launch itself. See run_tunnel.ps1.
+$tunnelAction = New-ScheduledTaskAction -Execute "powershell.exe" `
+    -Argument '-NoProfile -ExecutionPolicy Bypass -File "D:\Doslan\Desktop\LifU\backend\run_tunnel.ps1"'
 $tunnelTrigger = New-ScheduledTaskTrigger -AtStartup
 $tunnelSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 5 -RestartInterval (New-TimeSpan -Minutes 1)

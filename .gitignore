@@ -28,6 +28,8 @@ backend/data/
 *.db-wal
 *.db-shm
 backend/staticfiles/
+# Runtime log from the tunnel's retry wrapper (backend/run_tunnel.ps1).
+logs/
 backend/media/
 *.egg-info/
 build/
