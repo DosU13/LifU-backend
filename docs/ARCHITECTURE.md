@@ -255,10 +255,16 @@ Every service takes its dependencies (repos, `AIClient`, `Rng`, providers, clock
 ### 7.1 TaskService.complete_task(text)
 
 1. `resp = validate_task_valuation(ai.complete_json(TASK_VALUER_SYSTEM, text))` (§8).
-2. `avg = mean(resp.virtues.values())` (the 5 virtue ints).
+2. `total_virtue = sum(resp.virtues.values())` (the 5 virtue ints). If 0, no fragments at all.
 3. For each base element `e` with mapped task virtue `v`:
-   `fragments[e] = round((avg / 100) * (resp.virtues[v] / 100) * resp.value * VIRTUE_TUNER)` — can be 0.
-   Sanity: Value 10 run at ~50% virtues → ~2–3 per element; Value 100 project at 80% → ~64.
+   `fragments[e] = round((resp.virtues[v] / total_virtue) * resp.value * VIRTUE_TUNER)` — can be 0.
+   `value` is split across elements by each virtue's *share* of the task's own virtue
+   total, so `sum(fragments) ≈ resp.value * VIRTUE_TUNER` regardless of how many
+   virtues scored high — the earlier `(avg/100) * (v/100)` version double-counted
+   the average (once explicitly, again inside every `v/100` term) and made the
+   total scale with `value * avg²` instead of `value` alone.
+   Sanity: Value 10, virtues 50/50/50/50/50 → 2 per element (sum 10). Value 100,
+   Willpower 100 and the rest 0 → 100 Fire, nothing else (sum 100).
 4. `collectables.adjust({(e, FRAGMENT): n for nonzero n})`; save Task with valuation + awards; return both.
 
 ### 7.2 MergerService.merge_up(element, rarity)

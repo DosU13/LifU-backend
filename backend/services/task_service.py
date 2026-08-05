@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from statistics import mean
 
 from aiclients.base import AIClient
 from aiclients.validation import get_task_valuation
@@ -25,23 +24,34 @@ class TaskService:
         """Value the task via AI, award base-element fragments, persist, and return it.
 
         Fragment formula (ARCHITECTURE §7.1):
-        fragments[e] = round((avg_virtue/100) * (virtue_for_e/100) * value * VIRTUE_TUNER)
+        fragments[e] = round((virtue_for_e / total_virtue) * value * VIRTUE_TUNER)
+        `value` is split across elements by each virtue's *share* of the task's
+        own virtue total, rather than by each virtue's raw percentage scaled by
+        the average of all five. The raw-percentage version double-counted the
+        average (it appears explicitly, and again inside every virtue_for_e/100
+        term, since those are drawn from the same distribution), which made
+        sum(fragments) scale with value * avg_virtue^2 instead of value alone —
+        a task scored high across several virtues could total 2x its value in
+        fragments while a narrowly-focused task totaled well under 1x. This way
+        sum(fragments) ≈ value * VIRTUE_TUNER regardless of how many virtues
+        the AI rated highly, while a task still puts most of its fragments into
+        whichever element its dominant virtue maps to.
+
         Elements that round to 0 are omitted from both the collectable adjustment
-        and the persisted `fragments_awarded`.
+        and the persisted `fragments_awarded`. A task the AI scored as needing
+        no virtues at all (total_virtue == 0) awards nothing.
         """
         valuation = get_task_valuation(self._ai, text)
-        avg_virtue = mean(valuation.virtues.values())
+        total_virtue = sum(valuation.virtues.values())
 
         fragments: dict[Element, int] = {}
-        for element, task_virtue in ELEMENT_TASK_VIRTUE.items():
-            amount = round(
-                (avg_virtue / 100)
-                * (valuation.virtues[task_virtue] / 100)
-                * valuation.value
-                * VIRTUE_TUNER
-            )
-            if amount:
-                fragments[element] = amount
+        if total_virtue:
+            for element, task_virtue in ELEMENT_TASK_VIRTUE.items():
+                amount = round(
+                    (valuation.virtues[task_virtue] / total_virtue) * valuation.value * VIRTUE_TUNER
+                )
+                if amount:
+                    fragments[element] = amount
 
         if fragments:
             self._collectables.adjust(

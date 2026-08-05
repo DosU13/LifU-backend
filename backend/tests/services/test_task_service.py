@@ -32,7 +32,7 @@ def _make_service(responses):
 
 
 def test_value10_50pct_example_from_architecture():
-    """avg=50%, each virtue=50%, Value=10 -> ~2-3 fragments per base element (ARCHITECTURE §7.1)."""
+    """All virtues equal -> value splits evenly, 2 per element, summing to value (§7.1)."""
     service, _, collectables_repo = _make_service(
         [_ai_response(10, awareness=50, curiosity=50, willpower=50, compassion=50, discipline=50)]
     )
@@ -40,11 +40,34 @@ def test_value10_50pct_example_from_architecture():
 
     assert task.value == 10
     for element in BASE_ELEMENTS:
-        assert task.fragments_awarded[element] in (2, 3)
+        assert task.fragments_awarded[element] == 2
+    assert sum(task.fragments_awarded.values()) == 10
 
     stock = collectables_repo.get_all()
     for element in BASE_ELEMENTS:
         assert stock[(element, CollectableRarity.FRAGMENT)] == task.fragments_awarded[element]
+
+
+def test_sum_of_fragments_tracks_value_regardless_of_how_many_virtues_score_high():
+    """The bug this formula replaced: sum(fragments) scaled with value * avg^2, not value,
+    so a task scoring high on several virtues could total far more than its own value while
+    a narrowly-focused task totaled far less. Proportionality must hold either way now."""
+    service, _, _ = _make_service(
+        [_ai_response(50, awareness=90, curiosity=80, willpower=70, compassion=60, discipline=85)]
+    )
+    task = service.complete_task("finished a big multi-part project")
+
+    assert sum(task.fragments_awarded.values()) == 50
+
+
+def test_all_virtues_zero_awards_nothing_without_dividing_by_zero():
+    # The AI returns all-zero for empty/nonsense text (ARCHITECTURE §8) -- total_virtue
+    # would be 0, so the share formula must special-case this rather than divide by it.
+    service, _, collectables_repo = _make_service([_ai_response(0)])
+    task = service.complete_task("")
+
+    assert task.fragments_awarded == {}
+    assert all(count == 0 for count in collectables_repo.get_all().values())
 
 
 def test_rounds_to_zero_and_omits_element_and_skips_collectable_adjust():
@@ -59,15 +82,14 @@ def test_rounds_to_zero_and_omits_element_and_skips_collectable_adjust():
 
 
 def test_only_the_relevant_element_gets_fragments_when_one_virtue_dominates():
-    # avg = mean(0,0,100,0,0) = 20; Willpower maps to Fire.
+    # Willpower maps to Fire; it's the only nonzero virtue, so it takes 100% of value.
     service, _, _ = _make_service(
         [_ai_response(100, awareness=0, curiosity=0, willpower=100, compassion=0, discipline=0)]
     )
     task = service.complete_task("intense workout")
 
-    expected_fire = round((20 / 100) * (100 / 100) * 100)
-    assert task.fragments_awarded[Element.FIRE] == expected_fire
-    assert Element.SPACE not in task.fragments_awarded  # Awareness 0 -> rounds to 0
+    assert task.fragments_awarded == {Element.FIRE: 100}
+    assert Element.SPACE not in task.fragments_awarded  # Awareness 0 -> no share at all
 
 
 def test_persists_task_with_correct_fields():
