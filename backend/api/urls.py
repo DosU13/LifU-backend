@@ -11,6 +11,7 @@ from api.views.collectables import (
 from api.views.friends import (
     FriendLinkListCreateView,
     PublicFriendCheckView,
+    PublicFriendGiftView,
     TrialSessionView,
 )
 from api.views.health import HealthView
@@ -54,5 +55,10 @@ urlpatterns = [
     path("auth/session", SessionView.as_view(), name="auth-session"),
     path("friends", FriendLinkListCreateView.as_view(), name="friends"),
     path("public/friend/<str:name>", PublicFriendCheckView.as_view(), name="public-friend"),
+    path(
+        "public/friend/<str:name>/gift",
+        PublicFriendGiftView.as_view(),
+        name="public-friend-gift",
+    ),
     path("trial/session", TrialSessionView.as_view(), name="trial-session"),
 ]

@@ -348,6 +348,13 @@ class FriendLinkListResponseSerializer(serializers.Serializer):
 class PublicFriendResponseSerializer(serializers.Serializer):
     valid = serializers.BooleanField()
     name = serializers.CharField()
+    has_gifted = serializers.BooleanField(
+        help_text="True once this link has been used to seal a gift — only one is allowed."
+    )
+
+
+class PublicGiftRequestSerializer(serializers.Serializer):
+    text = serializers.CharField(allow_blank=False, trim_whitespace=True, max_length=4000)
 
 
 class TrialSessionResponseSerializer(serializers.Serializer):

@@ -5,16 +5,19 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from api.serializers import (
     ErrorResponseSerializer,
     FriendLinkListResponseSerializer,
     FriendLinkSerializer,
+    OkResponseSerializer,
     PublicFriendResponseSerializer,
+    PublicGiftRequestSerializer,
     TrialSessionResponseSerializer,
 )
-from core.errors import AlreadyExists
+from core.errors import AIResponseInvalid, AlreadyExists
 from services.container import owner_context
 from services.trial import get_trial_store
 
@@ -23,6 +26,19 @@ FRIEND_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,30}$")
 
 def friend_url(name: str) -> str:
     return f"{settings.FRIEND_LINK_BASE_URL}/{name}"
+
+
+def _has_gifted(name: str) -> bool:
+    """Whether a gift already exists under this friend name, from any channel.
+
+    No dedicated repository method: `list_non_generated()` already exists and
+    is already filtered/sorted in Python elsewhere (RewardView.get). Counts a
+    gift the owner entered manually via the admin composer too — one gift per
+    friend name, not per channel.
+    """
+    return any(
+        r.friend_name == name for r in owner_context().repos.receptacles.list_non_generated()
+    )
 
 
 class FriendCreateRequestSerializer(serializers.Serializer):
@@ -82,14 +98,18 @@ class FriendLinkListCreateView(APIView):
 
 
 class PublicFriendCheckView(APIView):
-    """Unauthenticated: lets a friend page confirm its link before offering a trial."""
+    """Unauthenticated: lets a friend page confirm its link before offering a trial or a gift."""
 
     permission_classes = []
 
     @extend_schema(responses={200: PublicFriendResponseSerializer})
     def get(self, request: Request, name: str) -> Response:
-        link = owner_context().repos.friend_links.get(name.strip().lower())
-        return Response({"valid": link is not None, "name": name})
+        slug = name.strip().lower()
+        link = owner_context().repos.friend_links.get(slug)
+        valid = link is not None
+        return Response(
+            {"valid": valid, "name": name, "has_gifted": _has_gifted(slug) if valid else False}
+        )
 
 
 class TrialSessionSerializer(serializers.Serializer):
@@ -133,5 +153,73 @@ class TrialSessionView(APIView):
                 "expires_at": session.expires_at,
             }
         )
+
+
+class GiftThrottle(AnonRateThrottle):
+    """Per-IP floor against blind hammering — see DEFAULT_THROTTLE_RATES."""
+
+    scope = "gift"
+
+
+class PublicFriendGiftView(APIView):
+    """Unauthenticated: a friend seals a reward directly into the owner's real game.
+
+    Always secret (the owner never wrote it) and always attributed to the
+    friend name in the URL. One gift per link — see _has_gifted. This is the
+    direct-entry alternative to the owner pasting a friend's message into the
+    admin composer's masked textarea: here nothing passes through the owner
+    at all before it is sealed.
+    """
+
+    permission_classes = []
+    throttle_classes = [GiftThrottle]
+
+    @extend_schema(
+        request=PublicGiftRequestSerializer,
+        responses={
+            200: OkResponseSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer,
+            502: ErrorResponseSerializer,
+        },
+    )
+    def post(self, request: Request, name: str) -> Response:
+        slug = name.strip().lower()
+        if owner_context().repos.friend_links.get(slug) is None:
+            return Response(
+                {
+                    "error": {
+                        "code": "UNKNOWN_FRIEND",
+                        "message": "That link is not recognised. Ask Doslan for one.",
+                    }
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if _has_gifted(slug):
+            return Response(
+                {
+                    "error": {
+                        "code": "ALREADY_GIFTED",
+                        "message": "This link has already been used to send a gift.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = PublicGiftRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            owner_context().reward_service().submit_reward(
+                text=serializer.validated_data["text"], is_secret=True, friend_name=slug
+            )
+        except AIResponseInvalid:
+            return Response(
+                {"error": {"code": "AI_INVALID", "message": "The AI response was invalid."}},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        return Response({"ok": True})
 
 

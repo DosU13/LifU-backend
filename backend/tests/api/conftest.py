@@ -1,4 +1,5 @@
 import pytest
+from django.core.cache import cache
 from rest_framework.test import APIClient
 
 from providers.fallback import FallbackContentProvider
@@ -27,12 +28,21 @@ def _clear_all() -> None:
 
 @pytest.fixture(autouse=True)
 def _reset_state(settings):
-    """No game state, trial session, or cached collaborator leaks between tests."""
+    """No game state, trial session, or cached collaborator leaks between tests.
+
+    Also clears Django's cache: DRF throttling (see GiftThrottle) counts
+    requests there, keyed by client IP, and the Django test client always
+    uses the same IP -- without this, unrelated tests hitting a throttled
+    view would accumulate against one shared counter and eventually start
+    failing with 429s that have nothing to do with what they're testing.
+    """
     settings.OWNER_PASSWORD = OWNER_PASSWORD
     settings.REPO_BACKEND = "memory"
     _clear_all()
+    cache.clear()
     yield
     _clear_all()
+    cache.clear()
 
 
 @pytest.fixture(autouse=True)

@@ -61,3 +61,16 @@
 .explainer li { line-height: 1.6; }
 
 .gate.wide > button { display: block; width: 100%; margin-top: 4px; }
+
+.gate-divider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 28px 0 22px;
+}
+
+.gift-section h2 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+
+.gift-section .composer { margin-top: 14px; }

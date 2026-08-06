@@ -189,7 +189,12 @@ export const api = {
   createFriend: (name: string) =>
     request<FriendLink>('/friends', { method: 'POST', body: { name } }),
   checkFriend: (name: string) =>
-    request<{ valid: boolean; name: string }>(`/public/friend/${name}`),
+    request<{ valid: boolean; name: string; has_gifted: boolean }>(`/public/friend/${name}`),
+  submitFriendGift: (name: string, text: string) =>
+    request<{ ok: boolean }>(`/public/friend/${name}/gift`, {
+      method: 'POST',
+      body: { text },
+    }),
   startTrial: (friendName: string) =>
     request<{ token: string; friend_name: string; expires_at: string }>('/trial/session', {
       method: 'POST',

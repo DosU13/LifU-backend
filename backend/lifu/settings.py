@@ -83,6 +83,14 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "api.errors.exception_handler",
+    # Only the friend-gift endpoint opts into throttling (throttle_classes on
+    # that view) — an unauthenticated write that costs a Groq call, so a
+    # basic per-IP floor against blind hammering is cheap insurance. Nothing
+    # else needs a rate limit: everything besides the public/* views requires
+    # the owner's session or a per-friend trial token already.
+    "DEFAULT_THROTTLE_RATES": {
+        "gift": "10/hour",
+    },
 }
 
 SPECTACULAR_SETTINGS = {
