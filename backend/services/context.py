@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from aiclients.base import AIClient
+from core.constants import TREASURE_POOL_MIN
 from core.rng import Rng
 from providers.base import ContentProvider
 from repos.factory import RepoBundle
@@ -67,4 +68,8 @@ class GameContext:
             content=self.content,
             rng=self.rng,
             timezone_name=self.timezone_name,
+            # Trial sandboxes seed a small, curated set of demo rewards and
+            # should show the full loop immediately, not wait for a
+            # real-economy-sized backlog (services/trial.py:STARTER_REWARDS).
+            pool_min=0 if self.is_trial else TREASURE_POOL_MIN,
         )

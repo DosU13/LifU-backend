@@ -11,6 +11,7 @@ from core.constants import (
     POUCH_VALUE_RANGE,
     SACK_VALUE_RANGE,
     TREASURE_COUNT,
+    TREASURE_POOL_MIN,
     TREASURE_SIZE_MAX,
     TREASURE_SIZE_MIN,
 )
@@ -68,6 +69,7 @@ class TreasureService:
         rng: Rng,
         timezone_name: str = "UTC",
         now: Callable[[], datetime] | None = None,
+        pool_min: int = TREASURE_POOL_MIN,
     ) -> None:
         self._treasures = treasures
         self._receptacles = receptacles
@@ -78,6 +80,11 @@ class TreasureService:
         self._rng = rng
         self._tz = ZoneInfo(timezone_name)
         self._now = now or (lambda: datetime.now(timezone.utc))
+        # Overridable per-context: trial sandboxes seed a small, curated set
+        # of demo rewards rather than a real backlog, and should show the
+        # full loop (including treasures) immediately regardless — see
+        # GameContext.treasure_service().
+        self._pool_min = pool_min
 
     # --- reading ---
 
@@ -108,14 +115,38 @@ class TreasureService:
     # --- generation ---
 
     def refill_empty_slots(self) -> None:
-        """Fill any slot without a treasure. A slot stays empty if the pool is dry."""
+        """Fill any slot without a treasure. A slot stays empty if the pool is dry.
+
+        The TREASURE_POOL_MIN gate (below) is checked once here, before the
+        loop, rather than inside generate() for each slot: generate() would
+        re-check the *live* pool after every draw, and three slots each
+        wanting up to TREASURE_SIZE_MAX could deplete a pool sitting right at
+        the threshold before the second or third slot got a turn, filling
+        some slots and mysteriously leaving others empty. One check covers
+        the whole refill.
+        """
+        if len(self._receptacles.list_by_state(ReceptacleState.IN_POOL)) < self._pool_min:
+            return
         occupied = {t.slot for t in self._treasures.get_all()}
         for slot in range(TREASURE_COUNT):
             if slot not in occupied:
-                self.generate(slot)
+                self._generate_unchecked(slot)
 
     def generate(self, slot: int) -> Treasure | None:
         """Draw 5-10 pool receptacles into a new treasure for `slot`.
+
+        Gated on TREASURE_POOL_MIN: treasures stop regenerating (here, and via
+        buy()/discard() below) once the pool of real, unsealed rewards runs
+        thin, rather than continuing to draw against a nearly-empty pool.
+        refill_empty_slots() has its own copy of this check for filling
+        multiple slots in one pass — see its docstring for why.
+        """
+        if len(self._receptacles.list_by_state(ReceptacleState.IN_POOL)) < self._pool_min:
+            return None
+        return self._generate_unchecked(slot)
+
+    def _generate_unchecked(self, slot: int) -> Treasure | None:
+        """Draw into `slot` with no pool-size gate — see generate() and refill_empty_slots().
 
         Aims for a spread of rarities: pool receptacles are grouped by rarity,
         each group shuffled, then drawn round-robin across the groups.

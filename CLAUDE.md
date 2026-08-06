@@ -49,7 +49,7 @@ Frontend (run from `frontend/`):
 - **Virtue** — one of the 10 receptacle classes (Nurturing … Freedom), 1:1 with combined elements.
 - **Key** — the collectable that opens a receptacle: element = virtue's combined element, rarity index matches (Safe of Serenity ⇒ Ocean Essence). Consumed on open.
 - **Rarity recalculation** — after any non-generated receptacle change: sort by value, apportion Chest:Safe:Vault:Sanctum = 27:9:3:1 (largest remainder); opened receptacles keep frozen rarity but still occupy slots.
-- **Treasure** — one of 3 slots holding 5–10 pool receptacles; buying rolls the drop table; price = avg value of contents.
+- **Treasure** — one of 3 slots holding 5–10 pool receptacles; buying rolls the drop table; price = avg value of contents. Slots only (re)generate while the pool holds ≥30 receptacles (`TREASURE_POOL_MIN`) — otherwise they sit empty.
 - **Pity** — per-treasure counters (Vault 27, Sanctum 81); guaranteed drop when reached and fulfillable; dies with the treasure.
 - **Discard** — "lose the treasure": once per day across all slots, contents return to pool.
 - **Pool** — non-generated, unopened receptacles not currently in a treasure (state IN_POOL).

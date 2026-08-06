@@ -51,6 +51,11 @@ TREASURE_COUNT = 3
 TREASURE_SIZE_MIN = 5
 TREASURE_SIZE_MAX = 10
 
+# Treasures stay unavailable until the pool has a real backlog of rewards —
+# owner's choice, so buying one out doesn't visibly drain a thin wishlist
+# down to nothing. Checked once per refill/regeneration event, not per slot.
+TREASURE_POOL_MIN = 30
+
 # Random coin value range for generated (Pouch/Sack) receptacles.
 POUCH_VALUE_RANGE: tuple[int, int] = (1, 15)
 SACK_VALUE_RANGE: tuple[int, int] = (10, 40)

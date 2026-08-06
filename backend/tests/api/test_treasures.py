@@ -46,6 +46,15 @@ def test_get_treasures_empty_pool_returns_no_treasures(client):
     assert response.json()["treasures"] == []
 
 
+def test_get_treasures_stays_empty_below_the_pool_minimum(client):
+    _seed_pool(29)  # one short of TREASURE_POOL_MIN
+
+    response = client.get(reverse("treasures"))
+
+    assert response.status_code == 200
+    assert response.json()["treasures"] == []
+
+
 def test_get_treasures_generates_three_slots(client):
     _seed_pool(30)
 
@@ -60,7 +69,7 @@ def test_get_treasures_generates_three_slots(client):
 
 
 def test_treasure_contents_never_expose_value_or_reward_text(client):
-    _seed_pool(10, is_secret=True)
+    _seed_pool(30, is_secret=True)
 
     response = client.get(reverse("treasures"))
 
@@ -74,7 +83,7 @@ def test_treasure_contents_never_expose_value_or_reward_text(client):
 
 
 def test_buy_without_coins_returns_400(client):
-    _seed_pool(10)
+    _seed_pool(30)
     treasure_id = client.get(reverse("treasures")).json()["treasures"][0]["id"]
 
     response = client.post(reverse("treasure-buy", args=[treasure_id]))
@@ -84,7 +93,7 @@ def test_buy_without_coins_returns_400(client):
 
 
 def test_buy_happy_path(client, monkeypatch):
-    _seed_pool(10)
+    _seed_pool(30)
     container.get_repos().wallet.adjust(1000)
     treasure_id = client.get(reverse("treasures")).json()["treasures"][0]["id"]
 
@@ -105,7 +114,11 @@ def test_buy_unknown_treasure_returns_404(client):
 
 
 def test_discard_returns_new_treasure_then_blocks_second_attempt(client):
-    _seed_pool(30)
+    # 60, not 30: the initial GET below can draw up to 30 into the three
+    # slots (real, unseeded RNG here), and discarding only returns the one
+    # slot's own contents (as few as 5) to the pool before regenerating it —
+    # needs enough headroom that the pool is still >= TREASURE_POOL_MIN then.
+    _seed_pool(60)
     treasures = client.get(reverse("treasures")).json()["treasures"]
 
     first = client.post(reverse("treasure-discard", args=[treasures[0]["id"]]))
@@ -186,7 +199,7 @@ def test_open_unknown_receptacle_returns_404(client):
 
 
 def test_state_returns_full_snapshot(client):
-    _seed_pool(10)
+    _seed_pool(30)
     container.get_repos().wallet.adjust(250)
 
     response = client.get(reverse("state"))
@@ -201,7 +214,7 @@ def test_state_returns_full_snapshot(client):
 
 
 def test_state_never_leaks_secret_text(client):
-    _seed_pool(10, is_secret=True)
+    _seed_pool(30, is_secret=True)
 
     response = client.get(reverse("state"))
 

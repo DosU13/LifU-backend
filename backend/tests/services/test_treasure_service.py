@@ -120,7 +120,7 @@ def _treasure_with(service, receptacles, treasures, specs: list[tuple[int, Recep
 
 def test_generate_draws_between_5_and_10_from_pool():
     service, receptacles, treasures, _, _ = _build(rng=_ScriptedRng(randints=[7]))
-    for i in range(20):
+    for i in range(30):
         receptacles.add(_receptacle(10 + i, CHEST))
 
     treasure = service.generate(slot=0)
@@ -133,11 +133,13 @@ def test_generate_draws_between_5_and_10_from_pool():
 
 
 def test_generate_clamps_to_pool_size_when_pool_is_small():
+    # Below TREASURE_POOL_MIN, so this exercises the draw-count clamp via the
+    # unchecked drawer directly rather than the (now gated) public generate().
     service, receptacles, _, _, _ = _build(rng=_ScriptedRng(randints=[10]))
     for _ in range(3):
         receptacles.add(_receptacle(10, CHEST))
 
-    treasure = service.generate(slot=0)
+    treasure = service._generate_unchecked(slot=0)
 
     assert len(treasure.receptacle_ids) == 3
 
@@ -148,11 +150,21 @@ def test_generate_returns_none_when_pool_is_empty():
     assert treasures.get_all() == []
 
 
+def test_generate_returns_none_below_the_pool_minimum():
+    """Below TREASURE_POOL_MIN, generate() refuses even though the pool isn't empty."""
+    service, receptacles, treasures, _, _ = _build(rng=_ScriptedRng(randints=[5]))
+    for _ in range(29):
+        receptacles.add(_receptacle(10, CHEST))
+
+    assert service.generate(slot=0) is None
+    assert treasures.get_all() == []
+
+
 def test_generate_spreads_across_rarities():
     service, receptacles, _, _, _ = _build(rng=_ScriptedRng(randints=[6]))
-    for _ in range(5):
+    for _ in range(15):
         receptacles.add(_receptacle(10, CHEST))
-    for _ in range(5):
+    for _ in range(15):
         receptacles.add(_receptacle(50, SAFE))
 
     treasure = service.generate(slot=0)
@@ -164,6 +176,9 @@ def test_generate_spreads_across_rarities():
 
 
 def test_refill_empty_slots_creates_three_treasures():
+    # Exactly TREASURE_POOL_MIN: the gate is checked once up front, not
+    # per-slot, so all three still fill even though drawing for them empties
+    # the pool well below 30 along the way.
     service, receptacles, treasures, _, _ = _build(rng=_ScriptedRng(randints=[5, 5, 5]))
     for i in range(30):
         receptacles.add(_receptacle(10 + i, CHEST))
@@ -173,9 +188,19 @@ def test_refill_empty_slots_creates_three_treasures():
     assert {t.slot for t in treasures.get_all()} == {0, 1, 2}
 
 
+def test_refill_empty_slots_does_nothing_below_the_pool_minimum():
+    service, receptacles, treasures, _, _ = _build(rng=_ScriptedRng(randints=[5, 5, 5]))
+    for i in range(29):
+        receptacles.add(_receptacle(10 + i, CHEST))
+
+    service.refill_empty_slots()
+
+    assert treasures.get_all() == []
+
+
 def test_receptacle_belongs_to_only_one_treasure():
     service, receptacles, treasures, _, _ = _build(rng=_ScriptedRng(randints=[5, 5, 5]))
-    for i in range(12):
+    for i in range(30):
         receptacles.add(_receptacle(10 + i, CHEST))
 
     service.refill_empty_slots()
@@ -212,6 +237,11 @@ def test_price_is_fixed_and_does_not_drop_as_the_treasure_empties():
 
 def test_generate_fixes_price_from_starting_contents():
     service, receptacles, treasures, _, _ = _build(rng=_ScriptedRng(randints=[5]))
+    # Filler to clear TREASURE_POOL_MIN; added first so the 5 priced ones
+    # below, added last, are the ones actually drawn (the memory repo and
+    # _draw_spread both preserve insertion order, popping from the end).
+    for _ in range(25):
+        receptacles.add(_receptacle(999, CHEST))
     for value in (10, 20, 30, 40, 50):
         receptacles.add(_receptacle(value, CHEST))
 
@@ -400,8 +430,8 @@ def test_pity_dies_with_the_treasure():
     treasure = _treasure_with(service, receptacles, treasures, [(10, CHEST)])
     treasure.pity[VAULT] = 20
     treasures.save(treasure)
-    # give the pool something so a replacement treasure can be generated
-    for _ in range(5):
+    # give the pool enough (>= TREASURE_POOL_MIN) so a replacement can generate
+    for _ in range(30):
         receptacles.add(_receptacle(10, CHEST))
 
     # emptying the treasure destroys it and generates a fresh one
@@ -421,7 +451,7 @@ def test_emptied_treasure_is_deleted_and_regenerated():
     rng = _ScriptedRng(randoms=[0.9, 0.9, 0.9, 0.0], randints=[5])
     service, receptacles, treasures, _, _ = _build(rng=rng)
     treasure = _treasure_with(service, receptacles, treasures, [(10, CHEST)])
-    for _ in range(5):
+    for _ in range(30):
         receptacles.add(_receptacle(20, CHEST))
 
     result = service.buy(treasure.id)
@@ -431,6 +461,20 @@ def test_emptied_treasure_is_deleted_and_regenerated():
     assert len(remaining) == 1
     assert remaining[0].id != treasure.id
     assert remaining[0].slot == 0
+
+
+def test_emptied_treasure_stays_gone_when_pool_is_below_the_minimum():
+    """The regeneration buy() triggers is gated the same as any other generate()."""
+    rng = _ScriptedRng(randoms=[0.9, 0.9, 0.9, 0.0], randints=[5])
+    service, receptacles, treasures, _, _ = _build(rng=rng)
+    treasure = _treasure_with(service, receptacles, treasures, [(10, CHEST)])
+    for _ in range(10):  # well under TREASURE_POOL_MIN
+        receptacles.add(_receptacle(20, CHEST))
+
+    result = service.buy(treasure.id)
+
+    assert result.treasure_gone is True
+    assert treasures.get_all() == []  # slot 0 left empty, not regenerated
 
 
 # --- discard ---
