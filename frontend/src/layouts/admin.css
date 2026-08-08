@@ -4,7 +4,8 @@
   max-width: 780px;
   margin: 0 auto;
   padding: 90px 32px 70px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
