@@ -70,6 +70,8 @@
 .contents .empty { color: var(--faint); font-size: 14px; }
 
 .floater {
+  --float-lift: -13px;
+  position: relative;
   width: clamp(130px, 17vw, 215px);
   display: flex;
   flex-direction: column;
@@ -79,7 +81,11 @@
   transition: opacity 0.6s, filter 0.6s, transform 0.6s;
 }
 
+/* Both sit above the rarity aura, which is a positioned pseudo-element and
+   would otherwise paint over them. */
 .floater img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: auto;
   max-height: 46vh;
@@ -87,12 +93,25 @@
   filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.7));
 }
 
-.floater .fname { font-size: 12.5px; color: var(--muted); text-align: center; }
+.floater .fname {
+  position: relative;
+  z-index: 1;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: center;
+}
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-13px); }
+  50%      { transform: translateY(var(--float-lift)); }
 }
+
+/* Rarity reads as weight: the better it is, the slower and deeper it rides.
+   These have to stay above .shiver — that rule resets the whole animation
+   shorthand, and a Sanctum shivering on a 5.2s clock would barely twitch. */
+.floater.tier-gilded  { --float-lift: -15px; animation-duration: 3.9s; }
+.floater.tier-radiant { --float-lift: -18px; animation-duration: 4.5s; }
+.floater.tier-mythic  { --float-lift: -22px; animation-duration: 5.2s; }
 
 /* Everything shivers, then they go out one at a time. */
 .floater.shiver { animation: shiver 0.5s ease-in-out infinite; }
@@ -119,6 +138,62 @@
 @keyframes won-pulse {
   0%, 100% { transform: scale(1.12); }
   50%      { transform: scale(1.2); }
+}
+
+/* --- rarity in the lineup -------------------------------------------------
+
+   Spotting the Sanctum before you commit the coins is most of why anyone
+   looks at this screen, so rarity has to read across the whole row at once.
+
+   An aura rather than the floor ring this started as: these things bob, and a
+   shadow that rises with the object casting it is worse than no shadow. An
+   aura is the item's own light, so it is allowed to travel with it. */
+.floater::before {
+  content: "";
+  position: absolute;
+  inset: -14% -14% 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.floater.tier-gilded::before {
+  opacity: 1;
+  background: radial-gradient(
+    closest-side circle at 50% 44%,
+    rgba(245, 193, 74, 0.22),
+    transparent
+  );
+}
+
+.floater.tier-radiant::before {
+  opacity: 1;
+  background: radial-gradient(
+    closest-side circle at 50% 44%,
+    rgba(168, 116, 250, 0.32),
+    rgba(245, 193, 74, 0.12) 55%,
+    transparent
+  );
+}
+
+.floater.tier-mythic::before {
+  opacity: 1;
+  background: radial-gradient(
+    closest-side circle at 50% 44%,
+    rgba(255, 240, 205, 0.34),
+    rgba(168, 116, 250, 0.26) 48%,
+    transparent
+  );
+}
+
+/* Flat colour and a glow rather than the reveal's moving foil — at 12.5px a
+   travelling gradient turns to mush. */
+.floater.tier-gilded .fname  { color: #d8c79a; }
+.floater.tier-radiant .fname { color: #cbb0f2; }
+
+.floater.tier-mythic .fname {
+  color: #fff1c9;
+  text-shadow: 0 0 10px rgba(245, 193, 74, 0.55);
 }
 
 .buy-row {

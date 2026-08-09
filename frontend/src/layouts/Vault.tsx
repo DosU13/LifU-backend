@@ -4,6 +4,7 @@ import { api } from '../api'
 import { COLLECTABLE_RARITIES, ELEMENTS, stockKey } from '../types'
 import type { CollectableRarity, Element, Receptacle, Stocks } from '../types'
 import { keyForReceptacle, label, nextRarity, revealTier, sellPrice } from '../domain'
+import type { RevealTier } from '../domain'
 import { useGameStore } from '../state/store'
 import { collectableFlavor, receptacleFlavor } from '../ui/flavorText'
 import { collectableIcon, receptacleIcon } from '../ui/Icon'
@@ -24,6 +25,29 @@ function dragPayload(item: BenchItem): string {
   return item.type === 'collectable'
     ? `collectable:${item.element}:${item.rarity}`
     : `receptacle:${item.receptacle.id}`
+}
+
+/**
+ * Rarity dressing borrows the reveal's vocabulary on purpose — what glows in
+ * the hoard is what will flash when it finally opens.
+ */
+function tileClass(base: string, tier: RevealTier | undefined): string {
+  return tier ? `${base} tier-${tier}` : base
+}
+
+/**
+ * The foil sweep from the reveal, shrunk onto a tile and masked by the icon.
+ * Only rendered for tiles that have a tier — the grid runs to ninety-odd of
+ * these, and the CSS leaves it idle until the tile is hovered.
+ */
+function TileSheen({ icon }: { icon: string }) {
+  return (
+    <i
+      className="tile-sheen"
+      aria-hidden="true"
+      style={{ maskImage: `url(${icon})`, WebkitMaskImage: `url(${icon})` }}
+    />
+  )
 }
 
 export function Vault() {
@@ -208,30 +232,35 @@ export function Vault() {
           <>
             <div className="label">Collectables</div>
             <div className="hoard-grid">
-              {held.map(({ element, rarity, count }) => (
-                <button
-                  type="button"
-                  key={stockKey(element, rarity)}
-                  className="item"
-                  draggable
-                  onDragStart={(event) =>
-                    event.dataTransfer.setData(
-                      'text/plain',
-                      dragPayload({ type: 'collectable', element, rarity }),
-                    )
-                  }
-                  // data-name drives the hover tooltip, which is CSS-only and
-                  // therefore invisible to assistive tech; the label is what
-                  // actually names the control.
-                  data-name={`${label(element)} ${label(rarity)}`}
-                  aria-label={`${label(element)} ${label(rarity)}, ${count} held`}
-                  onClick={() => addToBench({ type: 'collectable', element, rarity })}
-                  onDoubleClick={() => setInspected({ type: 'collectable', element, rarity })}
-                >
-                  <img src={collectableIcon(element, rarity)} width={50} height={50} alt="" />
-                  <span className="n">{count}</span>
-                </button>
-              ))}
+              {held.map(({ element, rarity, count }) => {
+                const icon = collectableIcon(element, rarity)
+                const tier = revealTier(rarity)
+                return (
+                  <button
+                    type="button"
+                    key={stockKey(element, rarity)}
+                    className={tileClass('item', tier)}
+                    draggable
+                    onDragStart={(event) =>
+                      event.dataTransfer.setData(
+                        'text/plain',
+                        dragPayload({ type: 'collectable', element, rarity }),
+                      )
+                    }
+                    // data-name drives the hover tooltip, which is CSS-only and
+                    // therefore invisible to assistive tech; the label is what
+                    // actually names the control.
+                    data-name={`${label(element)} ${label(rarity)}`}
+                    aria-label={`${label(element)} ${label(rarity)}, ${count} held`}
+                    onClick={() => addToBench({ type: 'collectable', element, rarity })}
+                    onDoubleClick={() => setInspected({ type: 'collectable', element, rarity })}
+                  >
+                    <img src={icon} width={50} height={50} alt="" />
+                    {tier && <TileSheen icon={icon} />}
+                    <span className="n">{count}</span>
+                  </button>
+                )
+              })}
             </div>
           </>
         )}
@@ -243,11 +272,13 @@ export function Vault() {
               {dropped.map((receptacle) => {
                 const key = keyForReceptacle(receptacle.virtue, receptacle.rarity)
                 const hasKey = (stocks[stockKey(key.element, key.rarity)] ?? 0) > 0
+                const icon = receptacleIcon(receptacle.virtue, receptacle.rarity)
+                const tier = revealTier(receptacle.rarity)
                 return (
                   <button
                     type="button"
                     key={receptacle.id}
-                    className={hasKey ? 'item' : 'item locked'}
+                    className={tileClass(hasKey ? 'item' : 'item locked', tier)}
                     draggable
                     onDragStart={(event) =>
                       event.dataTransfer.setData(
@@ -266,12 +297,8 @@ export function Vault() {
                     <span className={hasKey ? 'ready' : 'lock'} aria-hidden="true">
                       {hasKey ? '●' : '🔒'}
                     </span>
-                    <img
-                      src={receptacleIcon(receptacle.virtue, receptacle.rarity)}
-                      width={50}
-                      height={50}
-                      alt=""
-                    />
+                    <img src={icon} width={50} height={50} alt="" />
+                    {tier && <TileSheen icon={icon} />}
                   </button>
                 )
               })}
@@ -326,26 +353,27 @@ export function Vault() {
               Drag items in (or click) · double-click to inspect
             </span>
           ) : (
-            bench.map((item, index) => (
-              <button
-                type="button"
-                className="item"
-                key={index}
-                title="Take it back off"
-                onClick={() => setBench((c) => c.filter((_, i) => i !== index))}
-              >
-                <img
-                  src={
-                    item.type === 'collectable'
-                      ? collectableIcon(item.element, item.rarity)
-                      : receptacleIcon(item.receptacle.virtue, item.receptacle.rarity)
-                  }
-                  width={44}
-                  height={44}
-                  alt=""
-                />
-              </button>
-            ))
+            bench.map((item, index) => {
+              const icon =
+                item.type === 'collectable'
+                  ? collectableIcon(item.element, item.rarity)
+                  : receptacleIcon(item.receptacle.virtue, item.receptacle.rarity)
+              const tier = revealTier(
+                item.type === 'collectable' ? item.rarity : item.receptacle.rarity,
+              )
+              return (
+                <button
+                  type="button"
+                  className={tileClass('item', tier)}
+                  key={index}
+                  title="Take it back off"
+                  onClick={() => setBench((c) => c.filter((_, i) => i !== index))}
+                >
+                  <img src={icon} width={44} height={44} alt="" />
+                  {tier && <TileSheen icon={icon} />}
+                </button>
+              )
+            })
           )}
         </div>
 

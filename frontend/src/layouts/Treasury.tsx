@@ -145,11 +145,13 @@ export function Treasury() {
           contents.map((item, index) => {
             const isOut = sequence?.out.includes(index) ?? false
             const isWinner = sequence?.crowned === true && sequence.winner === index
+            const tier = revealTier(item.rarity)
             return (
               <div
                 key={index}
                 className={
                   'floater' +
+                  (tier ? ` tier-${tier}` : '') +
                   (rolling && !isOut && !isWinner ? ' shiver' : '') +
                   (isOut ? ' out' : '') +
                   (isWinner ? ' won' : '')

@@ -52,6 +52,60 @@ describe('the hoard', () => {
   })
 })
 
+describe('rarity in the grid', () => {
+  const tile = (name: RegExp) => screen.getByRole('button', { name })
+
+  function withOneOfEach() {
+    useGameStore.setState({
+      stocks: {
+        [stockKey('FIRE', 'FRAGMENT')]: 3,
+        [stockKey('FIRE', 'ESSENCE')]: 3,
+        [stockKey('FIRE', 'SOUL')]: 3,
+        [stockKey('FIRE', 'CORE')]: 3,
+      },
+    })
+    render(<Vault />)
+  }
+
+  it('dresses only the top three rarities', () => {
+    withOneOfEach()
+
+    expect(tile(/fire fragment, 3 held/i).className).toBe('item')
+    expect(tile(/fire essence, 3 held/i)).toHaveClass('tier-gilded')
+    expect(tile(/fire soul, 3 held/i)).toHaveClass('tier-radiant')
+    expect(tile(/fire core, 3 held/i)).toHaveClass('tier-mythic')
+  })
+
+  it('only pays for a shimmer on the tiles that use one', () => {
+    // Ninety-odd tiles can fit in the hoard; an idle node on each is the cost
+    // this is avoiding.
+    withOneOfEach()
+
+    expect(tile(/fire fragment, 3 held/i).querySelector('.tile-sheen')).toBeNull()
+    expect(tile(/fire core, 3 held/i).querySelector('.tile-sheen')).toBeInTheDocument()
+  })
+
+  it('masks each shimmer with that tile own icon', () => {
+    withOneOfEach()
+    const sheen = tile(/fire core, 3 held/i).querySelector<HTMLElement>('.tile-sheen')
+
+    expect(sheen?.style.maskImage).toContain('fire_core.png')
+    expect(sheen).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('reaches sealed receptacles too, without disturbing the locked state', () => {
+    useGameStore.setState({
+      stocks: {},
+      droppedReceptacles: [receptacle({ rarity: 'SANCTUM', virtue: 'FREEDOM' })],
+    })
+    render(<Vault />)
+
+    const sealed = screen.getByRole('button', { name: /sanctum of freedom, locked/i })
+    expect(sealed).toHaveClass('locked')
+    expect(sealed).toHaveClass('tier-mythic')
+  })
+})
+
 describe('receptacle key badges', () => {
   it('marks a receptacle ready when its key is held', () => {
     useGameStore.setState({

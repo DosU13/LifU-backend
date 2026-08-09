@@ -44,7 +44,13 @@
   transform: translateY(-3px);
 }
 
-.item img { filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6)); }
+/* Lifted above the rarity plate below, which is a positioned pseudo-element
+   and would otherwise paint straight over it. */
+.item img {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6));
+}
 .item.locked img { opacity: 0.78; }
 
 .item .n {
@@ -83,6 +89,146 @@
   z-index: 5;
 }
 .item:hover::after { opacity: 1; }
+
+/* --- rarity in the grid ---------------------------------------------------
+
+   The same three tiers the reveal uses, so what glows in the hoard is what
+   will flash when it is finally opened.
+
+   Restraint matters more here than there. The grid can hold ninety-odd tiles
+   and it is sorted rarity-ascending, so the best things sit at the bottom of a
+   scroll and need to be findable without the whole wall moving. Everything
+   below is static except one slow breath on mythic; the shimmer waits to be
+   hovered. */
+
+.item { --tile-icon: 50px; }
+.slots .item { --tile-icon: 44px; }
+
+/* The plate behind the icon. ::after is already the hover tooltip, so this is
+   ::before — and the icon is lifted over it rather than the plate pushed
+   under, which would also put it behind the tile's own hover background. */
+.item::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: calc(var(--tile-icon) + 16px);
+  height: calc(var(--tile-icon) + 16px);
+  margin-left: calc((var(--tile-icon) + 16px) / -2);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.item.tier-gilded::before {
+  opacity: 1;
+  background: radial-gradient(circle, rgba(245, 193, 74, 0.2), transparent 70%);
+}
+
+.item.tier-radiant::before {
+  opacity: 1;
+  background: radial-gradient(
+    circle,
+    rgba(168, 116, 250, 0.3),
+    rgba(245, 193, 74, 0.1) 45%,
+    transparent 72%
+  );
+}
+
+.item.tier-mythic::before {
+  opacity: 1;
+  background: radial-gradient(
+    circle,
+    rgba(255, 236, 190, 0.34),
+    rgba(168, 116, 250, 0.22) 42%,
+    transparent 74%
+  );
+  animation: tile-breathe 4.2s ease-in-out infinite;
+}
+
+/* The only thing in the hoard that moves on its own. Slow enough to notice
+   sideways rather than to pull the eye off whatever you were doing. */
+@keyframes tile-breathe {
+  0%, 100% { opacity: 0.62; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.09); }
+}
+
+/* A rim, as box-shadow rather than border-color, so the hover border and the
+   locked/ready pip keep working untouched. */
+.item.tier-gilded { box-shadow: inset 0 0 0 1px rgba(245, 193, 74, 0.28); }
+
+.item.tier-radiant {
+  box-shadow:
+    inset 0 0 0 1px rgba(199, 160, 250, 0.4),
+    0 0 16px -6px rgba(150, 90, 240, 0.75);
+}
+
+.item.tier-mythic {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 238, 196, 0.5),
+    0 0 22px -6px rgba(245, 193, 74, 0.8);
+}
+
+.item.tier-gilded img {
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 9px rgba(245, 193, 74, 0.5));
+}
+
+.item.tier-radiant img {
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 11px rgba(168, 116, 250, 0.65));
+}
+
+.item.tier-mythic img {
+  filter:
+    drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 8px rgba(255, 255, 255, 0.4))
+    drop-shadow(0 0 16px rgba(245, 193, 74, 0.7));
+}
+
+/* Idle cost is the whole problem at this count, so the shimmer only runs while
+   a tile is actually under the cursor. Masked by the icon, same as the
+   reveal's — see the note in overlay.css. */
+.tile-sheen {
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  z-index: 2;
+  width: var(--tile-icon);
+  height: var(--tile-icon);
+  margin-left: calc(var(--tile-icon) / -2);
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    108deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.85) 50%,
+    transparent 58%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  mask-size: var(--tile-icon) var(--tile-icon);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: var(--tile-icon) var(--tile-icon);
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mix-blend-mode: screen;
+}
+
+.item:hover .tile-sheen { animation: tile-sheen-sweep 0.85s ease-out; }
+
+@keyframes tile-sheen-sweep {
+  0%   { background-position: 150% 0; opacity: 0; }
+  15%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { background-position: -70% 0; opacity: 0; }
+}
+
+/* The plate and the rim are static and carry the rarity on their own, so
+   unlike the reveal there is nothing here that has to be taken out — only the
+   sweep, which is pure motion. */
+@media (prefers-reduced-motion: reduce) {
+  .tile-sheen { display: none; }
+}
 
 /* --- the bench --- */
 

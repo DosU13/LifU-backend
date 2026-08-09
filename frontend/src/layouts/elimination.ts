@@ -1,3 +1,4 @@
+import { RECEPTACLE_RARITIES } from '../types'
 import type { Receptacle, TreasureContentPreview } from '../types'
 
 /**
@@ -5,8 +6,16 @@ import type { Receptacle, TreasureContentPreview } from '../types'
  *
  * The survivor is decided by the server — it is whichever receptacle the buy
  * actually dropped. This only picks the *order the losers fade*, which is pure
- * theatre and safe to randomise. If the client chose the winner, the animation
- * would eventually disagree with the receptacle the player was really given.
+ * theatre and safe to arrange however reads best. If the client chose the
+ * winner, the animation would eventually disagree with the receptacle the
+ * player was really given.
+ *
+ * The losers go out worst-first, so whatever is left standing at the end is
+ * the best of what was in the treasure and the tension climbs to the final
+ * beat instead of leaking away when the Sanctum goes out third. This tells the
+ * player nothing: every content is on screen and labelled from the moment the
+ * treasure is selected. Ties are shuffled, so equal rarities do not fall in a
+ * fixed order every time.
  *
  * Contents deliberately expose no id (they omit value and reward text so a
  * treasure cannot be scouted), so the drop is matched on virtue and rarity.
@@ -45,6 +54,14 @@ export function planElimination(
   // and crown the wrong one.
   if (winner === -1) return null
 
-  const losers = contents.map((_, index) => index).filter((index) => index !== winner)
-  return { winner, order: shuffle(losers) }
+  const losers = contents
+    .map((content, index) => ({ index, rank: RECEPTACLE_RARITIES.indexOf(content.rarity) }))
+    .filter((entry) => entry.index !== winner)
+
+  // Shuffle first, then sort. Array.prototype.sort is stable, so the shuffle
+  // survives as the tie-break within each rarity while the ranking decides
+  // the overall order.
+  const order = [...shuffle(losers)].sort((a, b) => a.rank - b.rank)
+
+  return { winner, order: order.map((entry) => entry.index) }
 }

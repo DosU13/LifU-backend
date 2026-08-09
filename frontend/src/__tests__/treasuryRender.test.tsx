@@ -67,6 +67,31 @@ describe('the treasure selectors', () => {
   })
 })
 
+describe('rarity in the lineup', () => {
+  const floater = (name: string) => screen.getByText(name).closest('.floater')
+
+  async function selectIt() {
+    useGameStore.setState({ treasures: [treasure()], coins: 1000 })
+    render(<Treasury />)
+    await userEvent.click(screen.getByRole('button', { name: /240 coins/i }))
+  }
+
+  it('marks the good ones and leaves the rest plain', async () => {
+    await selectIt()
+
+    expect(floater('Pouch of Nurturing')?.className).toBe('floater')
+    expect(floater('Safe of Serenity')).toHaveClass('tier-gilded')
+    expect(floater('Sanctum of Freedom')).toHaveClass('tier-mythic')
+  })
+
+  it('keeps the tier alongside the elimination states, not instead of them', async () => {
+    // Both live in the same className; a tier that clobbered `.out` or `.won`
+    // would break the buy animation rather than merely look wrong.
+    await selectIt()
+    expect(floater('Sanctum of Freedom')?.className).toBe('floater tier-mythic')
+  })
+})
+
 describe('buying', () => {
   it('is offered at the fixed price when affordable', async () => {
     useGameStore.setState({ treasures: [treasure()], coins: 500, selectedTreasureId: 't1' })

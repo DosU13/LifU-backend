@@ -85,6 +85,39 @@ describe('planElimination', () => {
     expect(relabelled).toBeNull()
   })
 
+  it('sends the losers out worst-first, so the best is last standing', () => {
+    // Winner is the Safe at 1; the Pouch goes first and the Sanctum survives
+    // longest, which is where the tension is supposed to be.
+    const plan = planElimination(contents, { virtue: 'SERENITY', rarity: 'SAFE' }, noShuffle)
+    expect(plan?.order).toEqual([0, 3, 2])
+  })
+
+  it('holds the rarest loser back however the shuffle falls', () => {
+    for (let run = 0; run < 50; run += 1) {
+      const plan = planElimination(contents, { virtue: 'NURTURING', rarity: 'POUCH' })
+      expect(plan?.order.at(-1)).toBe(2)
+    }
+  })
+
+  it('still shuffles within a rarity rather than fixing their order', () => {
+    // Otherwise three Chests would fall in the same sequence every buy.
+    const tied = [
+      content('NURTURING', 'POUCH'),
+      content('SERENITY', 'CHEST'),
+      content('FREEDOM', 'CHEST'),
+      content('VITALITY', 'CHEST'),
+    ]
+
+    const seen = new Set<string>()
+    for (let run = 0; run < 60; run += 1) {
+      const plan = planElimination(tied, { virtue: 'NURTURING', rarity: 'POUCH' })
+      expect(plan?.order).toHaveLength(3)
+      seen.add(String(plan?.order))
+    }
+
+    expect(seen.size).toBeGreaterThan(1)
+  })
+
   it('handles a treasure down to its last content', () => {
     const one = [content('SERENITY', 'SAFE')]
     const plan = planElimination(one, { virtue: 'SERENITY', rarity: 'SAFE' }, noShuffle)
