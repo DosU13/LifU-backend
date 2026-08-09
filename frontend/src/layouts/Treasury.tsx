@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 
 import { label, revealTier } from '../domain'
 import { useGameStore } from '../state/store'
@@ -9,6 +10,20 @@ import { planElimination } from './elimination'
 import type { Treasure, TreasureContentPreview } from '../types'
 
 import './treasury.css'
+
+/** Orbiting sparks around a mythic drop. Six is plenty at floater size — the
+ * reveal earns fourteen, but this is ambient scenery, not the payoff. */
+const FLOATER_MOTE_COUNT = 6
+
+function FloaterMotes() {
+  return (
+    <div className="floater-motes" aria-hidden="true">
+      {Array.from({ length: FLOATER_MOTE_COUNT }, (_, i) => (
+        <i key={i} style={{ '--i': i } as CSSProperties} />
+      ))}
+    </div>
+  )
+}
 
 /** How long each beat of the elimination lasts. Slow on purpose — the wait is the point. */
 const SHIVER_MS = 1400
@@ -146,6 +161,7 @@ export function Treasury() {
             const isOut = sequence?.out.includes(index) ?? false
             const isWinner = sequence?.crowned === true && sequence.winner === index
             const tier = revealTier(item.rarity)
+            const icon = receptacleIcon(item.virtue, item.rarity)
             return (
               <div
                 key={index}
@@ -157,10 +173,24 @@ export function Treasury() {
                   (isWinner ? ' won' : '')
                 }
               >
-                <img
-                  src={receptacleIcon(item.virtue, item.rarity)}
-                  alt={`${label(item.rarity)} of ${label(item.virtue)}`}
-                />
+                {/* Everything in here is scenery around the icon — the rings
+                    are pseudo-elements on .stage itself (see treasury.css),
+                    so only the effects that need a per-item icon URL or a
+                    dynamic particle count are real nodes. All of it is
+                    aria-hidden; the label below says the same thing in
+                    words. */}
+                <div className="stage">
+                  <img src={icon} alt={`${label(item.rarity)} of ${label(item.virtue)}`} />
+                  {tier && (
+                    <div
+                      className="floater-sheen"
+                      aria-hidden="true"
+                      style={{ maskImage: `url(${icon})`, WebkitMaskImage: `url(${icon})` }}
+                    />
+                  )}
+                  {tier === 'mythic' && <FloaterMotes />}
+                  {isWinner && <div className="floater-shock" aria-hidden="true" />}
+                </div>
                 <span className="fname">
                   {label(item.rarity)} of {label(item.virtue)}
                 </span>

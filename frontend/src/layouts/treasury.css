@@ -135,6 +135,13 @@
     drop-shadow(0 0 90px rgba(245, 193, 74, 0.5));
 }
 
+.floater.won.tier-mythic {
+  filter:
+    drop-shadow(0 0 14px rgba(255, 255, 255, 0.6))
+    drop-shadow(0 0 46px var(--gold))
+    drop-shadow(0 0 110px rgba(168, 116, 250, 0.6));
+}
+
 @keyframes won-pulse {
   0%, 100% { transform: scale(1.12); }
   50%      { transform: scale(1.2); }
@@ -194,6 +201,197 @@
 .floater.tier-mythic .fname {
   color: #fff1c9;
   text-shadow: 0 0 10px rgba(245, 193, 74, 0.55);
+}
+
+/* --- motion, not just colour ----------------------------------------------
+
+   A treasure only ever floats 5-10 items and the top rarities are the whole
+   point of the screen (27:9:3:1 apportionment means a Sanctum is rare even
+   inside a treasure), so this can afford real motion in a way the 90-tile
+   vault grid could not.
+
+   .stage wraps just the icon — a separate box from .fname below it — so the
+   rings and sheen have a clean square to sit inside without also stretching
+   under the label. Everything here is namespaced floater-* on purpose: the
+   overlay's reveal and the vault's hover-sheen reuse .sheen/.motes/.shock as
+   bare names, and those leaked into anything sharing the class before they
+   were scoped under .veil. Distinct names here sidestep that class of bug
+   entirely rather than relying on nesting to contain it. */
+
+.floater .stage {
+  position: relative;
+  width: 100%;
+}
+
+/* The rings: a slower gold ring from Safe upward, a second violet one
+   counter-rotating only for Sanctum. Two speeds beating against each other
+   reads busier than one fast ring, same trick as the reveal's dual rays. */
+.floater .stage::before,
+.floater .stage::after {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.floater.tier-radiant .stage::before,
+.floater.tier-mythic .stage::before {
+  opacity: 1;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 10%, rgba(245, 193, 74, 0.4) 10% 13%,
+    transparent 13% 30%, rgba(245, 193, 74, 0.4) 30% 33%,
+    transparent 33% 50%, rgba(245, 193, 74, 0.4) 50% 53%,
+    transparent 53% 70%, rgba(245, 193, 74, 0.4) 70% 73%,
+    transparent 73% 90%, rgba(245, 193, 74, 0.4) 90% 93%,
+    transparent 93%
+  );
+  animation: ring-spin 9s linear infinite;
+  mix-blend-mode: screen;
+}
+
+.floater.tier-mythic .stage::before { animation-duration: 6.5s; }
+
+.floater.tier-mythic .stage::after {
+  opacity: 1;
+  background: conic-gradient(
+    from 30deg,
+    transparent 0 12%, rgba(168, 116, 250, 0.45) 12% 15%,
+    transparent 15% 32%, rgba(168, 116, 250, 0.45) 32% 35%,
+    transparent 35% 52%, rgba(168, 116, 250, 0.45) 52% 55%,
+    transparent 55% 72%, rgba(168, 116, 250, 0.45) 72% 75%,
+    transparent 75%
+  );
+  animation: ring-spin 7.5s linear infinite reverse;
+  mix-blend-mode: screen;
+}
+
+@keyframes ring-spin { to { transform: rotate(360deg); } }
+
+/* The sheen: mostly idle, with a brief pass every few seconds rather than the
+   reveal's one-shot sweep — this has to keep drawing the eye for as long as
+   the treasure stays open, not just for one entrance. Masked by the icon
+   itself (set inline, per item, in Treasury.tsx) so it travels the
+   silhouette rather than sweeping a bare square across it. */
+.floater-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    108deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.85) 50%,
+    transparent 58%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  mask-size: 100% 100%;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mix-blend-mode: screen;
+  animation: floater-sheen-sweep 5.5s ease-in-out infinite;
+}
+
+/* Idle for most of the cycle, then a quick pass near the end — the interval
+   itself is most of the tell (Sanctum catches the light far more often than
+   Safe does), on top of ring speed and the aura underneath. */
+@keyframes floater-sheen-sweep {
+  0%, 74%  { background-position: 160% 0; opacity: 0; }
+  86%      { opacity: 1; }
+  100%     { background-position: -70% 0; opacity: 0; }
+}
+
+.floater.tier-radiant .floater-sheen { animation-duration: 4s; }
+
+.floater.tier-mythic .floater-sheen {
+  animation-duration: 2.8s;
+  background: linear-gradient(
+    108deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.95) 50%,
+    transparent 58%
+  );
+}
+
+/* Motes: mythic only, orbiting the icon's centre. Radii are fixed px rather
+   than scaled to the floater's clamp(130px, 17vw, 215px) width — the same
+   spread the reveal uses for its 190px icon lands close enough across that
+   range that scaling it exactly was not worth the complexity. */
+.floater-motes {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.floater-motes i {
+  --mote-r: 66px;
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #fff3d0;
+  box-shadow: 0 0 8px 2px rgba(245, 193, 74, 0.85);
+  animation: floater-mote-orbit 3.2s linear infinite;
+  animation-delay: calc(var(--i) * -0.53s);
+}
+
+.floater-motes i:nth-child(3n + 1) { --mote-r: 56px; }
+.floater-motes i:nth-child(3n + 2) { --mote-r: 76px; }
+
+@keyframes floater-mote-orbit {
+  0%   { transform: rotate(0deg) translateX(var(--mote-r)) scale(0.5); opacity: 0; }
+  15%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: rotate(360deg) translateX(var(--mote-r)) scale(1); opacity: 0; }
+}
+
+/* The crowning moment: a one-shot ring punched outward the instant a floater
+   is confirmed as the winner, so the buy sequence already speaks the same
+   visual language the following full-screen reveal is about to use. Reacts
+   to `.won`, not tier, so even a plain Chest gets this — every win deserves
+   the beat, only the loudest rarities get the ambient scenery leading up to it. */
+.floater-shock {
+  position: absolute;
+  inset: -12%;
+  z-index: 2;
+  border: 2px solid rgba(245, 193, 74, 0.85);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: floater-shockwave 0.9s cubic-bezier(0.1, 0.7, 0.3, 1) both;
+}
+
+.floater.tier-mythic .floater-shock { border-color: rgba(255, 246, 218, 0.9); }
+
+@keyframes floater-shockwave {
+  0%   { transform: scale(0.5); opacity: 0; }
+  12%  { opacity: 0.9; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* The kinetic layer only. Rings, sheen, motes and the shockwave are nothing
+   but their motion — the blanket rule in tokens.css freezes rather than
+   removes, which would leave a static ring frozen mid-rotation and a pile of
+   dots parked on the icon. The aura and the tier colours above stay: those
+   read as rarity on their own without moving. */
+@media (prefers-reduced-motion: reduce) {
+  .floater .stage::before,
+  .floater .stage::after,
+  .floater-sheen,
+  .floater-motes,
+  .floater-shock {
+    display: none;
+  }
 }
 
 .buy-row {

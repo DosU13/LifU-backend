@@ -90,6 +90,40 @@ describe('rarity in the lineup', () => {
     await selectIt()
     expect(floater('Sanctum of Freedom')?.className).toBe('floater tier-mythic')
   })
+
+  it('gives every tier the sheen, but only mythic the orbiting motes', async () => {
+    await selectIt()
+
+    expect(floater('Pouch of Nurturing')?.querySelector('.floater-sheen')).toBeNull()
+    expect(floater('Safe of Serenity')?.querySelector('.floater-sheen')).toBeInTheDocument()
+    expect(floater('Sanctum of Freedom')?.querySelector('.floater-sheen')).toBeInTheDocument()
+
+    expect(floater('Safe of Serenity')?.querySelectorAll('.floater-motes i')).toHaveLength(0)
+    expect(floater('Sanctum of Freedom')?.querySelectorAll('.floater-motes i')).toHaveLength(6)
+  })
+
+  it('masks each sheen with that item own icon, not a generic square', async () => {
+    await selectIt()
+
+    const sheen = floater('Sanctum of Freedom')?.querySelector<HTMLElement>('.floater-sheen')
+    expect(sheen?.style.maskImage).toContain('freedom_sanctum.png')
+  })
+
+  it('holds back the one-shot crown ring until there is actually a winner', async () => {
+    // The buy sequence is exercised in elimination.test.ts; here it is enough
+    // that nothing claims to be a winner before a buy has even happened.
+    await selectIt()
+    expect(document.querySelector('.floater-shock')).toBeNull()
+  })
+
+  it('keeps every decoration out of the accessibility tree', async () => {
+    await selectIt()
+
+    const sanctum = floater('Sanctum of Freedom')
+    for (const selector of ['.floater-sheen', '.floater-motes']) {
+      expect(sanctum?.querySelector(selector)).toHaveAttribute('aria-hidden', 'true')
+    }
+  })
 })
 
 describe('buying', () => {

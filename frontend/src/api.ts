@@ -43,11 +43,17 @@ export class ApiError extends Error {
 
 /**
  * The API's origin in production (e.g. "https://api.lifu.doslan.com"), where
- * the frontend and API are served from different subdomains. Empty in dev,
- * where Vite proxies /api to the local backend same-origin — see
- * vite.config.ts.
+ * the frontend and API are served from different subdomains.
+ *
+ * Always empty in dev, and deliberately not merely defaulted to empty: Vite
+ * loads a plain `.env` in *every* mode, not just production builds, so a stray
+ * VITE_API_BASE_URL there silently points `npm run dev` at the deployed API.
+ * Nothing then works, because the session cookie is set for that origin and
+ * SameSite=Lax will not send it back from localhost — login just appears to do
+ * nothing. Dev is same-origin through the Vite proxy, always; put the
+ * production origin in `.env.production`, which is the mode-scoped file.
  */
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+const API_BASE = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL ?? '')
 
 /**
  * Held in memory only, never persisted. A trial is meant to be a place to
