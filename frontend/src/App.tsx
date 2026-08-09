@@ -4,6 +4,7 @@ import { EventToasts } from './components/EventToasts'
 import { FriendGate } from './components/FriendGate'
 import { LoginGate } from './components/LoginGate'
 import { Admin } from './layouts/Admin'
+import { Codex } from './layouts/Codex'
 import { Ledger } from './layouts/Ledger'
 import { Treasury } from './layouts/Treasury'
 import { Vault } from './layouts/Vault'
@@ -52,6 +53,7 @@ function GameShell() {
           { id: 'ledger', label: 'Log what you did', node: <Ledger /> },
           { id: 'vault', label: 'Everything you own', node: <Vault /> },
           { id: 'treasury', label: 'Treasures', node: <Treasury /> },
+          { id: 'codex', label: 'The codex', node: <Codex /> },
         ]}
       />
     </>

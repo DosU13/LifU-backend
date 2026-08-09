@@ -4,6 +4,7 @@ import {
   COMBINED_PAIRS,
   VIRTUE_ELEMENT,
   collectableRarityFor,
+  doshaComposition,
   isCombinedElement,
   keyForReceptacle,
   nextRarity,
@@ -64,6 +65,37 @@ describe('reveal tiers', () => {
   it('treats a receptacle exactly like the collectable of its ordinal', () => {
     RECEPTACLE_RARITIES.forEach((rarity, index) => {
       expect(revealTier(rarity)).toBe(revealTier(COLLECTABLE_RARITIES[index]!))
+    })
+  })
+})
+
+describe('dosha composition', () => {
+  it('sends Space and Air to Vata alone', () => {
+    expect(doshaComposition({ SPACE: 4, AIR: 6 })).toEqual({ vata: 10, pitta: 0, kapha: 0 })
+  })
+
+  it('counts water in full toward both Pitta and Kapha, not split in half', () => {
+    // Owner's call: halving water would leave Pitta and Kapha drawing on one
+    // and a half elements each while Vata draws on two whole ones, quietly
+    // discounting the two doshas that happen to share an element.
+    expect(doshaComposition({ FIRE: 5, WATER: 5, EARTH: 5 })).toEqual({
+      vata: 0,
+      pitta: 10,
+      kapha: 10,
+    })
+  })
+
+  it('returns all zeros for no history', () => {
+    expect(doshaComposition({})).toEqual({ vata: 0, pitta: 0, kapha: 0 })
+  })
+
+  it('ignores combined elements and Harmony defensively', () => {
+    // Tasks only ever award base fragments, but the function's input type
+    // permits any element, so a combined one should not silently count.
+    expect(doshaComposition({ SPACE: 2, HARMONY: 9, SUN: 9, OCEAN: 9 })).toEqual({
+      vata: 2,
+      pitta: 0,
+      kapha: 0,
     })
   })
 })

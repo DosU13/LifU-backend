@@ -148,3 +148,57 @@ export function label(value: string): string {
 export function elementLabel(element: Element): string {
   return `${ELEMENT_EMOJI[element]} ${label(element)}`
 }
+
+/* --- the Codex: doshas ------------------------------------------------- */
+
+export type Dosha = 'VATA' | 'PITTA' | 'KAPHA'
+
+export const DOSHAS: readonly Dosha[] = ['VATA', 'PITTA', 'KAPHA']
+
+/**
+ * Sanskrit + the mahabhutas each dosha draws on, for the Codex page. Colours
+ * are a validated categorical triple (dataviz skill, run against the book's
+ * parchment surface #e8dcc3) — do not retune these by eye; re-run
+ * `validate_palette.py` if they ever change.
+ */
+export const DOSHA_INFO: Record<
+  Dosha,
+  { name: string; sanskrit: string; elements: Element[]; color: string }
+> = {
+  VATA: { name: 'Vata', sanskrit: 'वात', elements: ['SPACE', 'AIR'], color: '#4b4aa8' },
+  PITTA: { name: 'Pitta', sanskrit: 'पित्त', elements: ['FIRE', 'WATER'], color: '#b6532e' },
+  KAPHA: { name: 'Kapha', sanskrit: 'कफ', elements: ['EARTH', 'WATER'], color: '#188a6e' },
+}
+
+export interface DoshaComposition {
+  vata: number
+  pitta: number
+  kapha: number
+}
+
+/**
+ * Earned base fragments, read as a constitution. Vata = Space + Air, Pitta =
+ * Fire + Water, Kapha = Earth + Water — Water genuinely belongs to both Pitta
+ * and Kapha in the classical texts, so it counts in full toward each rather
+ * than being split in half. Halving it would make every dosha but those two
+ * draw on a full element each while Pitta and Kapha each drew on one and a
+ * half, understating both against Vata. Double-counting water is fine here:
+ * the three scores are read as proportions of each other, not as a share of
+ * total fragments, so nothing needs to sum to the fragment count.
+ *
+ * Reads earned fragments (`Task.fragments_awarded`), never current stocks —
+ * selling a Water Fragment should not change what you are made of.
+ */
+export function doshaComposition(fragments: Partial<Record<Element, number>>): DoshaComposition {
+  const space = fragments.SPACE ?? 0
+  const air = fragments.AIR ?? 0
+  const fire = fragments.FIRE ?? 0
+  const water = fragments.WATER ?? 0
+  const earth = fragments.EARTH ?? 0
+
+  return {
+    vata: space + air,
+    pitta: fire + water,
+    kapha: earth + water,
+  }
+}

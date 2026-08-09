@@ -1,0 +1,358 @@
+/* The Codex — an open book on a dark table, not another dark-glass panel.
+   Every other layout in this app is violet-and-gold on near-black; this one
+   is ink on parchment on purpose, because it is meant to read as a found
+   object rather than a UI surface. That is also why it is exempt from the
+   app's dark/light theming: a page in a physical book does not have a dark
+   mode, and forcing one here would undercut the entire premise. */
+
+.codex {
+  width: 100%;
+  max-width: 1040px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* --- the book itself ---------------------------------------------------- */
+
+.book-shell {
+  position: relative;
+  padding: 18px;
+  border-radius: 10px;
+  background: linear-gradient(155deg, #3a2a1c, #1c130c 60%, #241a11);
+  box-shadow:
+    0 40px 90px -30px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 220, 170, 0.06),
+    /* A faint candlelit wash rather than the app's usual violet glow — this
+       object is lit from in front of it, not from within it. */
+    0 0 140px -40px rgba(245, 193, 74, 0.16);
+}
+
+.book {
+  position: relative;
+  display: flex;
+  width: min(900px, 88vw);
+  height: clamp(440px, 60vh, 620px);
+  border-radius: 3px;
+  overflow: hidden;
+  /* Gives the leaf's rotateY something to read as depth against, rather than
+     flattening to a horizontal squeeze. */
+  perspective: 2400px;
+}
+
+.page {
+  position: relative;
+  flex: 1 1 50%;
+  min-width: 0;
+  height: 100%;
+  padding: 40px 38px 34px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  color: #3b2f2a;
+  font-family: var(--serif);
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(255, 255, 255, 0.35), transparent 55%),
+    radial-gradient(140% 100% at 100% 100%, rgba(120, 92, 58, 0.16), transparent 60%),
+    #e8dcc3;
+}
+
+.page.left {
+  border-right: 1px solid rgba(60, 40, 20, 0.18);
+  box-shadow: inset -22px 0 30px -26px rgba(30, 18, 8, 0.55);
+}
+
+.page.right {
+  box-shadow: inset 22px 0 30px -26px rgba(30, 18, 8, 0.55);
+}
+
+/* The spine: a shadow, not a hinge — there is nothing to click here, the
+   turn buttons below are the accessible path. */
+.spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 34px;
+  margin-left: -17px;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(20, 12, 6, 0.28) 45%,
+    rgba(20, 12, 6, 0.28) 55%,
+    transparent
+  );
+}
+
+.page h2 {
+  font-size: 21px;
+  font-weight: 400;
+  color: #2a1f18;
+  margin: 0 0 4px;
+  letter-spacing: 0.02em;
+}
+
+.page .rule {
+  width: 76px;
+  height: 1px;
+  margin: 10px 0 16px;
+  background: linear-gradient(90deg, rgba(90, 60, 30, 0.6), transparent);
+}
+
+.page p {
+  margin: 0 0 13px;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: #4a3b32;
+}
+
+.page .sanskrit {
+  font-style: italic;
+  color: #7a5330;
+}
+
+/* The dropped first letter, applied selectively via a class rather than a
+   blanket ::first-letter — several spreads open on something other than
+   prose (an icon row, a chart), where a drop cap would misfire. */
+.dropcap::first-letter {
+  float: left;
+  font-family: var(--serif);
+  font-size: 3.1em;
+  line-height: 0.78;
+  padding: 4px 8px 0 0;
+  color: #6b3f22;
+}
+
+.folio {
+  position: absolute;
+  bottom: 14px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: #8a6f4d;
+}
+
+.page.left .folio { left: 38px; }
+.page.right .folio { right: 38px; }
+
+/* --- element rows -------------------------------------------------------- */
+
+.element-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.element-row img {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  /* Reads as painted-onto-the-page rather than the app's usual glowing
+     drop-shadow treatment — a multiply blend lets the parchment itself
+     provide the "ink" the icon sits in, since the icons are already
+     chroma-keyed to a transparent background. */
+  filter: sepia(0.55) saturate(1.35) hue-rotate(-8deg) contrast(1.05);
+  mix-blend-mode: multiply;
+}
+
+.element-row .name {
+  display: block;
+  font-size: 15px;
+  color: #2a1f18;
+  margin-bottom: 2px;
+}
+
+.element-row p { margin: 0; font-size: 13.5px; }
+
+/* --- doshas + charts spread ---------------------------------------------- */
+
+.dosha-entry { margin-bottom: 14px; }
+.dosha-entry .name { font-size: 15px; margin-bottom: 2px; display: flex; align-items: baseline; gap: 8px; }
+.dosha-entry .swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+}
+
+.dosha-charts {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.dosha-chart {
+  flex: 1 1 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dosha-chart h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: #5c4a3a;
+  margin: 0;
+}
+
+.dosha-chart .empty-note {
+  font-size: 12.5px;
+  font-style: italic;
+  color: #8a7156;
+  text-align: center;
+  padding: 30px 6px;
+}
+
+.dosha-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #4a3b32;
+}
+
+.dosha-legend .row { display: flex; align-items: center; gap: 6px; }
+.dosha-legend .num { margin-left: auto; font-variant-numeric: tabular-nums; color: #6b5744; }
+
+/* --- turning ---------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.controls .folio-count {
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  min-width: 84px;
+  text-align: center;
+}
+
+.page-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 26px;
+  z-index: 3;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.page.left .page-edge { left: 0; }
+.page.right .page-edge { right: 0; }
+
+/* The turning leaf: two static pages render the current spread; this is the
+   only element that moves, and only while a turn is in flight. */
+.leaf {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  z-index: 5;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.leaf.forward {
+  right: 0;
+  transform-origin: left center;
+  animation: leaf-forward var(--turn-duration, 0.8s) cubic-bezier(0.45, 0.05, 0.15, 1) both;
+}
+
+.leaf.backward {
+  left: 0;
+  transform-origin: right center;
+  animation: leaf-backward var(--turn-duration, 0.8s) cubic-bezier(0.45, 0.05, 0.15, 1) both;
+}
+
+@keyframes leaf-forward { to { transform: rotateY(-180deg); } }
+@keyframes leaf-backward { to { transform: rotateY(180deg); } }
+
+.leaf-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  padding: 40px 38px 34px;
+  background: #e8dcc3;
+}
+
+/* The back face is pre-flipped so that once its parent has rotated 180deg,
+   the content reads normally rather than mirrored — the standard flip-card
+   trick, just applied to a page instead of a card. */
+.leaf-back { transform: rotateY(180deg); }
+
+/* A shadow that only exists while the leaf is mid-air, peaking as it passes
+   vertical (where a real page would bow slightly and catch the least light)
+   and gone the instant it lands — physicality without a physics engine. */
+.leaf-face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(20, 12, 6, 0.35), transparent 55%);
+  opacity: 0;
+  animation: leaf-shade var(--turn-duration, 0.8s) linear both;
+}
+
+.leaf-back::after { background: linear-gradient(270deg, rgba(20, 12, 6, 0.35), transparent 55%); }
+
+@keyframes leaf-shade {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+
+/* Motion is the entire mechanism here, not decoration on top of something
+   that already works without it — so reduced motion gets an instant swap
+   at the call site (Codex.tsx checks the media query itself and skips
+   spawning a leaf) rather than a CSS override. This block is the fallback
+   for the rare case a leaf is already in flight when the preference
+   changes mid-animation. */
+@media (prefers-reduced-motion: reduce) {
+  .leaf { animation: none !important; }
+  .leaf-face::after { animation: none !important; opacity: 0 !important; }
+}
+
+@media (max-width: 720px) and (min-width: 641px) {
+  .book { width: 94vw; }
+  .page { padding: 32px 26px 28px; }
+  .element-row { gap: 10px; }
+}
+
+/* Two half-width pages stop being legible well before phone width, so below
+   640px the book gives up the side-by-side spread and stacks the current
+   spread's pages instead — still "one spread at a time," just read
+   top-to-bottom rather than left-to-right. Codex.tsx pairs this with
+   usePlainTurn() so the 3D leaf (which assumes two pages side by side) is
+   never spawned at this width; it swaps instantly instead. */
+@media (max-width: 640px) {
+  .book {
+    flex-direction: column;
+    width: 92vw;
+    height: auto;
+    max-height: 74vh;
+    overflow-y: auto;
+    perspective: none;
+  }
+  .page {
+    height: auto;
+    padding: 28px 22px 24px;
+    overflow-y: visible;
+  }
+  .page.left { border-right: none; box-shadow: none; border-bottom: 1px solid rgba(60, 40, 20, 0.18); }
+  .page.right { box-shadow: none; }
+  .spine { display: none; }
+  .page-edge { display: none; }
+}
