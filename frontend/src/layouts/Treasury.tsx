@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { label } from '../domain'
+import { label, revealTier } from '../domain'
 import { useGameStore } from '../state/store'
 import { collectableIcon, receptacleIcon, treasureIcon } from '../ui/Icon'
 import { Modal, Reveal } from '../ui/Overlay'
@@ -81,6 +81,9 @@ export function Treasury() {
         {
           image: receptacleIcon(result.drop.virtue, result.drop.rarity),
           title: `${label(result.drop.rarity)} of ${label(result.drop.virtue)}`,
+          // Keyed off the same rarity the title prints, not dropped_rarity —
+          // the spectacle has to agree with the name next to it.
+          tier: revealTier(result.drop.rarity),
           note: result.was_pity ? 'pity paid out — now find its key' : 'now find its key',
         },
       ])

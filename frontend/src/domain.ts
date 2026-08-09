@@ -80,6 +80,37 @@ export function collectableRarityFor(rarity: ReceptacleRarity): CollectableRarit
   return match
 }
 
+/** Where a rarity sits on the shared 0-5 scale, whichever scale it is named on. */
+function rarityIndex(rarity: CollectableRarity | ReceptacleRarity): number {
+  const collectable = COLLECTABLE_RARITIES.indexOf(rarity as CollectableRarity)
+  return collectable === -1
+    ? RECEPTACLE_RARITIES.indexOf(rarity as ReceptacleRarity)
+    : collectable
+}
+
+/** How loud the reveal gets. The top three rarities only; the rest stay plain. */
+export type RevealTier = 'gilded' | 'radiant' | 'mythic'
+
+const REVEAL_TIERS: Partial<Record<number, RevealTier>> = {
+  3: 'gilded', // Safe / Essence
+  4: 'radiant', // Vault / Soul
+  5: 'mythic', // Sanctum / Core
+}
+
+/**
+ * Because the two scales share an ordinal, one table covers both: a Core is as
+ * loud as a Sanctum. Nothing below index 3 is tiered — if every payout got an
+ * effect, none of them would read as an event.
+ *
+ * This tells the player nothing they cannot already see: the rarity is printed
+ * on the reveal in words. It dresses up a name, it does not reveal one.
+ */
+export function revealTier(
+  rarity: CollectableRarity | ReceptacleRarity,
+): RevealTier | undefined {
+  return REVEAL_TIERS[rarityIndex(rarity)]
+}
+
 /** The exact collectable that opens a receptacle: a Safe of Serenity needs an Ocean Essence. */
 export function keyForReceptacle(
   virtue: Virtue,

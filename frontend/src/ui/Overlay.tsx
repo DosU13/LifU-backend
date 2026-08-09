@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+
+import type { RevealTier } from '../domain'
 
 import './overlay.css'
 
@@ -55,6 +57,27 @@ export interface Prize {
   amount?: string
   /** The quiet line underneath: which virtue paid, or what happens next. */
   note?: string
+  /**
+   * Extra spectacle for the top three rarities, from `revealTier`. Spelled
+   * `| undefined` rather than left bare so callers can pass that function's
+   * result straight through — `exactOptionalPropertyTypes` rejects an
+   * explicit `undefined` for a plainly optional property.
+   */
+  tier?: RevealTier | undefined
+}
+
+/** More of them the rarer it is; the CSS staggers each one off its index. */
+const MOTE_COUNT: Record<RevealTier, number> = { gilded: 6, radiant: 10, mythic: 14 }
+const EMBER_COUNT = 18
+
+function particles(className: string, count: number) {
+  return (
+    <div className={className} aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <i key={i} style={{ '--i': i } as CSSProperties} />
+      ))}
+    </div>
+  )
 }
 
 interface RevealProps {
@@ -69,16 +92,51 @@ export function Reveal({ queue, index, onAdvance, onSkip }: RevealProps) {
   if (!prize) return null
 
   const hasMore = queue.length > 1
+  const { tier } = prize
+  const loud = tier === 'radiant' || tier === 'mythic'
 
   return (
-    <div className="veil" role="dialog" aria-modal="true" aria-live="polite">
+    <div
+      className={tier ? `veil tier-${tier}` : 'veil'}
+      role="dialog"
+      aria-modal="true"
+      aria-live="polite"
+    >
+      {/* All of this is decoration and says nothing the text below does not,
+          so it stays out of the accessibility tree entirely. */}
       <div className="rays" aria-hidden="true" />
+      {loud && <div className="rays violet" aria-hidden="true" />}
+      {tier === 'mythic' && (
+        <>
+          {/* Keyed so the one-shot flash fires per prize. The veil itself
+              survives a queue advance, and an animation on a surviving
+              element does not restart. */}
+          <div className="flash" key={`flash-${index}`} aria-hidden="true" />
+          {particles('embers', EMBER_COUNT)}
+        </>
+      )}
 
-      <div className="prize" key={index}>
-        <img src={prize.image} alt="" width={190} height={190} />
-        {prize.amount && <div className="prize-amount">{prize.amount}</div>}
-        <div className="prize-title">{prize.title}</div>
-        {prize.note && <div className="prize-note">{prize.note}</div>}
+      <div className="prize-frame" key={index}>
+        <div className="prize">
+          {loud && <div className="shock" aria-hidden="true" />}
+          <img src={prize.image} alt="" width={190} height={190} />
+          {tier && (
+            <div
+              className="sheen"
+              aria-hidden="true"
+              // Masked by the icon itself, so the shimmer follows its
+              // silhouette instead of sweeping a bare square across it.
+              style={{
+                maskImage: `url(${prize.image})`,
+                WebkitMaskImage: `url(${prize.image})`,
+              }}
+            />
+          )}
+          {tier && particles('motes', MOTE_COUNT[tier])}
+          {prize.amount && <div className="prize-amount">{prize.amount}</div>}
+          <div className="prize-title">{prize.title}</div>
+          {prize.note && <div className="prize-note">{prize.note}</div>}
+        </div>
       </div>
 
       {hasMore && (

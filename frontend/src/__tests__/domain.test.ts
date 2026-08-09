@@ -7,6 +7,7 @@ import {
   isCombinedElement,
   keyForReceptacle,
   nextRarity,
+  revealTier,
   sellPrice,
 } from '../domain'
 import { COLLECTABLE_RARITIES, RECEPTACLE_RARITIES, VIRTUES } from '../types'
@@ -39,6 +40,30 @@ describe('key derivation', () => {
   it('maps receptacle rarities onto collectable rarities by ordinal', () => {
     RECEPTACLE_RARITIES.forEach((rarity, index) => {
       expect(collectableRarityFor(rarity)).toBe(COLLECTABLE_RARITIES[index])
+    })
+  })
+})
+
+describe('reveal tiers', () => {
+  it('leaves the bottom half of the scale plain', () => {
+    // If every payout got an effect, none of them would land as an event.
+    expect(revealTier('FRAGMENT')).toBeUndefined()
+    expect(revealTier('SHARD')).toBeUndefined()
+    expect(revealTier('CRYSTAL')).toBeUndefined()
+    expect(revealTier('POUCH')).toBeUndefined()
+    expect(revealTier('SACK')).toBeUndefined()
+    expect(revealTier('CHEST')).toBeUndefined()
+  })
+
+  it('escalates over the top three', () => {
+    expect(revealTier('ESSENCE')).toBe('gilded')
+    expect(revealTier('SOUL')).toBe('radiant')
+    expect(revealTier('CORE')).toBe('mythic')
+  })
+
+  it('treats a receptacle exactly like the collectable of its ordinal', () => {
+    RECEPTACLE_RARITIES.forEach((rarity, index) => {
+      expect(revealTier(rarity)).toBe(revealTier(COLLECTABLE_RARITIES[index]!))
     })
   })
 })

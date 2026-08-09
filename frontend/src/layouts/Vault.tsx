@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { COLLECTABLE_RARITIES, ELEMENTS, stockKey } from '../types'
 import type { CollectableRarity, Element, Receptacle, Stocks } from '../types'
-import { keyForReceptacle, label, nextRarity, sellPrice } from '../domain'
+import { keyForReceptacle, label, nextRarity, revealTier, sellPrice } from '../domain'
 import { useGameStore } from '../state/store'
 import { collectableFlavor, receptacleFlavor } from '../ui/flavorText'
 import { collectableIcon, receptacleIcon } from '../ui/Icon'
@@ -134,6 +134,7 @@ export function Vault() {
             {
               image: receptacleIcon(opened.virtue, opened.rarity),
               title: `${label(opened.rarity)} of ${label(opened.virtue)}`,
+              tier: revealTier(opened.rarity),
               note:
                 opened.reward_text ??
                 opened.content?.text ??
@@ -150,6 +151,7 @@ export function Vault() {
               image: collectableIcon('HARMONY', op.rarity),
               amount: `×${result.yield}`,
               title: `${label(op.rarity)} Harmony`,
+              tier: revealTier(op.rarity),
               ...(result.extras > 0
                 ? { note: `${result.extras} extra from the build-up!` }
                 : {}),
@@ -174,12 +176,14 @@ export function Vault() {
               ? {
                   image: collectableIcon(op.element, op.to),
                   title: `${label(op.to)} ${label(op.element)}`,
+                  tier: revealTier(op.to),
                   note: 'merged',
                   ...(succeeded > 1 ? { amount: `×${succeeded}` } : {}),
                 }
               : {
                   image: collectableIcon(op.result, op.rarity),
                   title: `${label(op.rarity)} ${label(op.result)}`,
+                  tier: revealTier(op.rarity),
                   note: 'combined',
                   ...(succeeded > 1 ? { amount: `×${succeeded}` } : {}),
                 },

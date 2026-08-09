@@ -11,9 +11,19 @@
   gap: 24px;
 }
 
-.prize {
+/* The frame exists so screen-level motion (the mythic jolt) has an element of
+   its own. Stacked on the same element, two transform animations fight and the
+   later one simply wins. */
+.prize-frame {
   position: relative;
   z-index: 2;
+}
+
+.prize {
+  position: relative;
+  /* Keeps the foil sheen blending against the icon rather than whatever the
+     veil happens to be sitting on. */
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -80,6 +90,306 @@
 }
 
 @keyframes rays-turn { to { transform: rotate(360deg); } }
+
+/* --- rarity tiers ---------------------------------------------------------
+
+   Three escalating steps for the top three rarities, shared by both scales
+   because they share an ordinal — a Core is as loud as a Sanctum. Everything
+   below is purely additive, so an untiered payout looks exactly as it did.
+
+     gilded  (Safe / Essence)  the icon shimmers and picks up orbiting motes
+     radiant (Vault / Soul)    violet counter-rotation, a shockwave, brighter
+     mythic  (Sanctum / Core)  the screen reacts: flash, embers, foil, a jolt
+
+   None of it tells the player anything the title does not already say in
+   words. It is loudness keyed to a name that is already on screen. */
+
+.tier-gilded .rays  { animation-duration: 11s; }
+.tier-radiant .rays { animation-duration: 8.5s; }
+.tier-mythic .rays  { animation-duration: 6.5s; }
+
+/* A second set turning the other way. Two speeds beating against each other
+   reads far busier than one fast layer, for the same amount of paint. */
+.rays.violet {
+  width: 780px;
+  height: 780px;
+  background: conic-gradient(
+    from 32deg,
+    transparent 0 11%, rgba(150, 90, 240, 0.2) 11% 13%,
+    transparent 13% 27%, rgba(150, 90, 240, 0.2) 27% 29%,
+    transparent 29% 44%, rgba(150, 90, 240, 0.2) 44% 46%,
+    transparent 46% 61%, rgba(150, 90, 240, 0.2) 61% 63%,
+    transparent 63% 78%, rgba(150, 90, 240, 0.2) 78% 80%,
+    transparent 80%
+  );
+  animation-duration: 12s;
+  animation-direction: reverse;
+}
+
+.tier-mythic .rays.violet { animation-duration: 9s; }
+
+/* The glow the icon throws, one step brighter each tier. */
+.tier-gilded .prize img {
+  filter:
+    drop-shadow(0 0 48px rgba(245, 193, 74, 0.8))
+    drop-shadow(0 0 100px rgba(150, 90, 240, 0.45));
+}
+
+.tier-radiant .prize img {
+  filter:
+    drop-shadow(0 0 10px rgba(255, 246, 218, 0.4))
+    drop-shadow(0 0 58px rgba(245, 193, 74, 0.95))
+    drop-shadow(0 0 125px rgba(150, 90, 240, 0.6));
+}
+
+.tier-mythic .prize img {
+  filter:
+    drop-shadow(0 0 14px rgba(255, 255, 255, 0.55))
+    drop-shadow(0 0 68px rgb(245, 193, 74))
+    drop-shadow(0 0 150px rgba(150, 90, 240, 0.75));
+}
+
+/* The foil pass, laid over the 190px icon and masked by it in the markup —
+   so the highlight travels the silhouette instead of a bare square. */
+.prize .sheen {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 190px;
+  height: 190px;
+  margin-left: -95px;
+  pointer-events: none;
+  background: linear-gradient(
+    108deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.8) 50%,
+    transparent 60%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  mask-size: 190px 190px;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 190px 190px;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mix-blend-mode: screen;
+  animation: sheen-sweep 1.2s ease-out 0.4s both;
+}
+
+@keyframes sheen-sweep {
+  0%   { background-position: 150% 0; opacity: 0; }
+  18%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { background-position: -70% 0; opacity: 0; }
+}
+
+.tier-radiant .prize .sheen { animation-duration: 1s; }
+
+.tier-mythic .prize .sheen {
+  background: linear-gradient(
+    108deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.95) 50%,
+    transparent 60%
+  );
+  animation: sheen-sweep 0.95s ease-out 0.35s 2 both;
+}
+
+/* Motes orbit the middle of the icon: the origin is a zero-size point there
+   and each one swings out to its own radius. */
+.motes {
+  position: absolute;
+  top: 95px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.motes i {
+  --mote-r: 118px;
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: #fff3d0;
+  box-shadow: 0 0 9px 2px rgba(245, 193, 74, 0.85);
+  animation: mote-orbit var(--mote-dur) linear infinite;
+  /* --i is set per particle in the markup; a negative step spreads them
+     around the ring instead of launching all of them together. */
+  animation-delay: calc(var(--i) * var(--mote-step));
+}
+
+/* Three loose rings rather than one perfect one. */
+.motes i:nth-child(3n + 1) { --mote-r: 100px; }
+.motes i:nth-child(3n + 2) { --mote-r: 134px; }
+
+@keyframes mote-orbit {
+  0%   { transform: rotate(0deg) translateX(var(--mote-r)) scale(0.5); opacity: 0; }
+  15%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: rotate(360deg) translateX(var(--mote-r)) scale(1); opacity: 0; }
+}
+
+.tier-gilded  .motes i { --mote-dur: 6s;   --mote-step: -1s; }
+.tier-radiant .motes i { --mote-dur: 4.6s; --mote-step: -0.46s; }
+.tier-mythic  .motes i { --mote-dur: 3.6s; --mote-step: -0.26s; }
+
+/* One ring punched outward from behind the icon on arrival. Scaled from a
+   large base so the border does not thicken into a doughnut on the way out. */
+.prize .shock {
+  position: absolute;
+  top: 95px;
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
+  border: 2px solid rgba(245, 193, 74, 0.85);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: shockwave 0.95s cubic-bezier(0.1, 0.7, 0.3, 1) 0.18s both;
+}
+
+.tier-mythic .prize .shock { border-color: rgba(255, 246, 218, 0.9); }
+
+@keyframes shockwave {
+  0%   { transform: scale(0.32); opacity: 0; }
+  12%  { opacity: 0.85; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+/* Mythic only, and the point of it: the background itself reacts, so the
+   moment reads as different in kind rather than merely brighter. */
+.flash {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    70vw 70vh at 50% 46%,
+    rgba(255, 240, 200, 0.5),
+    rgba(150, 90, 240, 0.28) 42%,
+    transparent 72%
+  );
+  animation: veil-flash 0.85s ease-out both;
+}
+
+@keyframes veil-flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.embers {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.embers i {
+  --ember-dur: 11s;
+  position: absolute;
+  top: -6vh;
+  left: calc(var(--i) * 5.4%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 7px 1px rgba(245, 193, 74, 0.7);
+  animation: ember-fall var(--ember-dur) linear infinite;
+  animation-delay: calc(var(--i) * -0.73s);
+}
+
+/* Two other speeds so they do not descend as one sheet, and some of them
+   violet, to match the wash the rest of the app sits in. */
+.embers i:nth-child(2n) { --ember-dur: 8.5s; }
+
+.embers i:nth-child(3n) {
+  --ember-dur: 13s;
+  background: #c9a6f5;
+  box-shadow: 0 0 7px 1px rgba(150, 90, 240, 0.7);
+}
+
+@keyframes ember-fall {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  10%  { opacity: 0.9; }
+  85%  { opacity: 0.7; }
+  100% { transform: translate(26px, 112vh); opacity: 0; }
+}
+
+.tier-gilded .prize-title  { color: #cbbcd9; }
+.tier-radiant .prize-title { color: #e2d5f5; }
+
+/* A hairline drawn under the name once the burst has settled. */
+.tier-gilded .prize-title { position: relative; }
+
+.tier-gilded .prize-title::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  animation: underline-draw 0.75s ease-out 0.75s both;
+}
+
+@keyframes underline-draw {
+  0%   { width: 0; margin-left: 0; opacity: 0; }
+  100% { width: 150%; margin-left: -75%; opacity: 1; }
+}
+
+/* Mythic gets the name itself in moving foil, rather than the flat gold every
+   other payout prints. */
+.tier-mythic .prize-title,
+.tier-mythic .prize-amount {
+  background: linear-gradient(
+    100deg,
+    var(--gold) 0%,
+    #fff6da 22%,
+    #c9a6f5 46%,
+    var(--gold) 70%,
+    #fff6da 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: foil-pass 3.4s linear infinite;
+}
+
+@keyframes foil-pass {
+  0%   { background-position: 0 0; }
+  100% { background-position: -300% 0; }
+}
+
+/* Small enough to read as impact rather than a fault. The frame moves, not
+   the veil — a shaking backdrop is a good way to make someone feel ill. */
+.tier-mythic .prize-frame { animation: mythic-jolt 0.4s ease-out 0.5s both; }
+
+@keyframes mythic-jolt {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  15%      { transform: translate3d(-4px, 2px, 0); }
+  32%      { transform: translate3d(4px, -3px, 0); }
+  50%      { transform: translate3d(-3px, -1px, 0); }
+  68%      { transform: translate3d(3px, 2px, 0); }
+  84%      { transform: translate3d(-1px, -1px, 0); }
+}
+
+/* The blanket reduced-motion rule in tokens.css stills every animation on the
+   page, which for these leaves a pile of dots parked on top of the icon —
+   they are nothing but their motion. Take them out entirely instead. */
+@media (prefers-reduced-motion: reduce) {
+  .motes,
+  .embers,
+  .flash,
+  .shock,
+  .sheen {
+    display: none;
+  }
+}
 
 .veil-actions {
   display: flex;
