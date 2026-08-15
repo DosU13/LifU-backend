@@ -67,26 +67,50 @@ export interface Prize {
   tier?: RevealTier | undefined
   /**
    * A generated Pouch/Sack's actual reward — a quote, a fact, a piece of art,
-   * a track. When present this replaces `note` with a richer, kind-specific
-   * display (the plain note line is for everything else: coin totals, "now
-   * find its key", a hand-written reward).
+   * a track. When present this replaces `note`/`passage` with a richer,
+   * kind-specific display.
    */
   content?: GeneratedContent | undefined
+  /**
+   * A hand-written reward's own words — gets the same large passage
+   * treatment as a generated quote/fact, since it is just as much "the
+   * reward" as those are. Ignored when `content` is present; takes priority
+   * over `note` otherwise.
+   */
+  passage?: string | undefined
+}
+
+/**
+ * Any prize text worth reading, not just glancing at — a quote, a fact, a
+ * hand-written reward. One shared look: a large oversized quotation mark as
+ * a quiet flourish (this is the featured text, not a caption), the passage
+ * itself in a calm serif italic, and — only when there is a source to name —
+ * a small gold rule and a label under it.
+ */
+function Passage({ text, attribution }: { text: string; attribution?: string }) {
+  return (
+    <div className="prize-passage">
+      <span className="prize-quote-mark" aria-hidden="true">
+        &ldquo;
+      </span>
+      <p className="prize-quote">{text}</p>
+      {attribution && <div className="prize-attrib">{attribution}</div>}
+    </div>
+  )
 }
 
 /** The quote/fact/art/music a generated Pouch or Sack actually held. */
 function PrizeContent({ content }: { content: GeneratedContent }) {
   if (content.kind === 'QUOTE' || content.kind === 'FACT') {
     return (
-      <div className="prize-passage">
-        <p className="prize-quote">&ldquo;{content.text}&rdquo;</p>
-        {content.author && <div className="prize-attrib">— {content.author}</div>}
+      <>
+        <Passage text={content.text} {...(content.author ? { attribution: content.author } : {})} />
         {content.kind === 'FACT' && content.url && (
           <a className="prize-link" href={content.url} target="_blank" rel="noreferrer">
             Source ↗
           </a>
         )}
-      </div>
+      </>
     )
   }
 
@@ -94,10 +118,8 @@ function PrizeContent({ content }: { content: GeneratedContent }) {
     return (
       <div className="prize-passage">
         {content.url && <img className="prize-art" src={content.url} alt={content.title} />}
-        <div className="prize-attrib">
-          {content.title}
-          {content.author && ` — ${content.author}`}
-        </div>
+        <div className="prize-caption">{content.title}</div>
+        {content.author && <div className="prize-attrib">{content.author}</div>}
         {content.text && (
           <a className="prize-link" href={content.text} target="_blank" rel="noreferrer">
             View source ↗
@@ -112,10 +134,8 @@ function PrizeContent({ content }: { content: GeneratedContent }) {
   // out to actually hear it.
   return (
     <div className="prize-passage">
-      <div className="prize-attrib">
-        {content.title}
-        {content.author && ` — ${content.author}`}
-      </div>
+      <div className="prize-caption">{content.title}</div>
+      {content.author && <div className="prize-attrib">{content.author}</div>}
       {content.url && (
         <a className="prize-link" href={content.url} target="_blank" rel="noreferrer">
           ▶ Listen ↗
@@ -196,6 +216,8 @@ export function Reveal({ queue, index, onAdvance, onSkip }: RevealProps) {
           <div className="prize-title">{prize.title}</div>
           {prize.content ? (
             <PrizeContent content={prize.content} />
+          ) : prize.passage ? (
+            <Passage text={prize.passage} />
           ) : (
             prize.note && <div className="prize-note">{prize.note}</div>
           )}

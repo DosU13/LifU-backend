@@ -85,10 +85,9 @@ export function Vault() {
   )
 
   /** Replays an already-opened receptacle through the same reveal it got the
-   * first time — tier VFX and all — rather than the plain static detail card.
-   * A double click fires the row's own onClick first (that is how double
-   * clicks work), which would otherwise leave the static detail modal open
-   * underneath the reveal — closing it here keeps only one overlay on screen. */
+   * first time — tier VFX and all. `setInspected(null)` guards against a
+   * detail card left open from inspecting something else — only one overlay
+   * should ever be on screen at once. */
   function replayOpen(receptacle: Receptacle) {
     setInspected(null)
     reveal.show([
@@ -99,7 +98,7 @@ export function Vault() {
         ...(receptacle.content
           ? { content: receptacle.content }
           : receptacle.reward_text
-            ? { note: receptacle.reward_text }
+            ? { passage: receptacle.reward_text }
             : {}),
       },
     ])
@@ -182,7 +181,9 @@ export function Vault() {
               tier: revealTier(opened.rarity),
               ...(opened.content
                 ? { content: opened.content }
-                : { note: opened.reward_text ?? `+${result.coins_gained} coins` }),
+                : opened.reward_text
+                  ? { passage: opened.reward_text }
+                  : { note: `+${result.coins_gained} coins` }),
             },
           ])
           refreshOpened()
@@ -335,9 +336,8 @@ export function Vault() {
                   type="button"
                   key={receptacle.id}
                   className="opened-row"
-                  title="Double-click to replay how it opened"
-                  onClick={() => setInspected({ type: 'receptacle', receptacle })}
-                  onDoubleClick={() => replayOpen(receptacle)}
+                  title="Replay how it opened"
+                  onClick={() => replayOpen(receptacle)}
                 >
                   <img
                     src={receptacleIcon(receptacle.virtue, receptacle.rarity)}
@@ -501,36 +501,9 @@ function ItemDetail({
   if (inspected.type === 'receptacle') {
     const { receptacle } = inspected
 
-    if (receptacle.state === 'OPENED') {
-      return (
-        <Modal onClose={onClose} labelledBy="detail-title">
-          <div className="detail-card">
-            <img
-              src={receptacleIcon(receptacle.virtue, receptacle.rarity)}
-              width={150}
-              height={150}
-              alt=""
-            />
-            <h2 id="detail-title">
-              {label(receptacle.rarity)} of {label(receptacle.virtue)}
-            </h2>
-            <div className="label">
-              opened{receptacle.value !== null ? ` · was worth ${receptacle.value}` : ''}
-            </div>
-            <p className="desc">
-              {receptacle.reward_text ?? receptacle.content?.text ?? 'Nothing recorded.'}
-            </p>
-            <p className="legend">{receptacleFlavor(receptacle.virtue, receptacle.rarity)}</p>
-            <div className="detail-actions">
-              <button type="button" className="btn-ghost" onClick={onClose}>
-                Close
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )
-    }
-
+    // Opened receptacles never reach this component — a click on one in the
+    // opened list replays the full reveal directly (see replayOpen above)
+    // rather than opening this static card.
     const key = keyForReceptacle(receptacle.virtue, receptacle.rarity)
     const hasKey = (stocks[stockKey(key.element, key.rarity)] ?? 0) > 0
 

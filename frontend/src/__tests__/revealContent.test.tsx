@@ -32,9 +32,14 @@ describe('Reveal — what a generated Pouch or Sack actually held', () => {
   it('prints a quote large and central, not tucked into the small note line', () => {
     show(content())
 
-    expect(screen.getByText('“The obstacle is the way.”')).toBeInTheDocument()
-    expect(screen.getByText('— Marcus Aurelius')).toBeInTheDocument()
+    expect(screen.getByText('The obstacle is the way.')).toBeInTheDocument()
+    expect(screen.getByText('Marcus Aurelius')).toBeInTheDocument()
     expect(document.querySelector('.prize-quote')).toBeInTheDocument()
+    // The oversized quotation mark is a decorative flourish, not literal
+    // punctuation wrapping the sentence — kept out of the a11y tree.
+    const mark = document.querySelector('.prize-quote-mark')
+    expect(mark).toBeInTheDocument()
+    expect(mark).toHaveAttribute('aria-hidden', 'true')
     // The rich content replaces the plain note — no matter what the caller
     // passed as a fallback, the passage wins.
     expect(document.querySelector('.prize-note')).not.toBeInTheDocument()
@@ -69,7 +74,8 @@ describe('Reveal — what a generated Pouch or Sack actually held', () => {
 
     const img = screen.getByRole('img', { name: 'Nighthawks' })
     expect(img).toHaveAttribute('src', 'https://example.com/nighthawks.jpg')
-    expect(screen.getByText(/Nighthawks — Edward Hopper/)).toBeInTheDocument()
+    expect(screen.getByText('Nighthawks')).toBeInTheDocument()
+    expect(screen.getByText('Edward Hopper')).toBeInTheDocument()
     const link = screen.getByRole('link', { name: /view source/i })
     expect(link).toHaveAttribute('href', 'https://example.com/nighthawks')
   })
@@ -85,11 +91,31 @@ describe('Reveal — what a generated Pouch or Sack actually held', () => {
       }),
     )
 
-    expect(screen.getByText(/Clair de Lune — Debussy/)).toBeInTheDocument()
+    expect(screen.getByText('Clair de Lune')).toBeInTheDocument()
+    expect(screen.getByText('Debussy')).toBeInTheDocument()
     const link = screen.getByRole('link', { name: /listen/i })
     expect(link).toHaveAttribute('href', 'https://example.com/clair-de-lune')
     // No audio element — an arbitrary stream URL is not safe to autoplay or trust.
     expect(document.querySelector('audio')).not.toBeInTheDocument()
+  })
+
+  it('gives a hand-written reward the same large passage treatment as a generated quote', () => {
+    render(
+      <Reveal
+        queue={[
+          { image: ICON, title: 'Safe of Serenity', tier: 'gilded', passage: 'Movie night, your pick.' },
+        ]}
+        index={0}
+        onAdvance={() => {}}
+        onSkip={() => {}}
+      />,
+    )
+
+    expect(screen.getByText('Movie night, your pick.')).toBeInTheDocument()
+    expect(document.querySelector('.prize-quote')).toBeInTheDocument()
+    expect(document.querySelector('.prize-quote-mark')).toBeInTheDocument()
+    // No author to cite — the passage stands alone, no attribution rule under it.
+    expect(document.querySelector('.prize-attrib')).not.toBeInTheDocument()
   })
 
   it('falls back to the plain note when there is no generated content', () => {

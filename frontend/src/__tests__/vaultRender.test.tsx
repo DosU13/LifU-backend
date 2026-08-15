@@ -265,30 +265,20 @@ describe('opened receptacles', () => {
     })
   }
 
-  it('a single click still shows the plain static card, not the flashy veil', async () => {
+  it('a click replays the full tiered reveal it got the first time', async () => {
     vi.spyOn(api, 'listReceptacles').mockResolvedValue({ receptacles: [opened()] })
     render(<Vault />)
 
     await userEvent.click(await screen.findByRole('button', { name: /safe of serenity/i }))
 
-    const dialog = screen.getByRole('dialog')
-    expect(within(dialog).getByText(/the obstacle is the way/i)).toBeInTheDocument()
-    expect(within(dialog).getByText(/opened · was worth 40/i)).toBeInTheDocument()
-    expect(document.querySelector('.detail-card')).toBeInTheDocument()
-    expect(document.querySelector('.prize-frame')).not.toBeInTheDocument()
-  })
-
-  it('a double click replays the full tiered reveal instead', async () => {
-    vi.spyOn(api, 'listReceptacles').mockResolvedValue({ receptacles: [opened()] })
-    render(<Vault />)
-
-    await userEvent.dblClick(await screen.findByRole('button', { name: /safe of serenity/i }))
-
-    expect(document.querySelector('.prize-frame')).toBeInTheDocument()
+    const frame = document.querySelector('.prize-frame')
+    expect(frame).toBeInTheDocument()
     expect(document.querySelector('.veil.tier-gilded')).toBeInTheDocument()
-    // Same rich-content path a fresh open uses — the quote itself, not a caption.
-    expect(screen.getByText('“The obstacle is the way.”')).toBeInTheDocument()
-    expect(screen.getByText('— Marcus Aurelius')).toBeInTheDocument()
+    // Scoped to the reveal — the same text also legitimately sits in the
+    // row's own preview caption underneath. Same rich-content path a fresh
+    // open uses: the quote itself, not a caption.
+    expect(within(frame as HTMLElement).getByText('The obstacle is the way.')).toBeInTheDocument()
+    expect(within(frame as HTMLElement).getByText('Marcus Aurelius')).toBeInTheDocument()
   })
 
   it('falls back to the hand-written reward text when there is no generated content', async () => {
@@ -297,7 +287,7 @@ describe('opened receptacles', () => {
     })
     render(<Vault />)
 
-    await userEvent.dblClick(await screen.findByRole('button', { name: /safe of serenity/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /safe of serenity/i }))
 
     // Scoped to the reveal itself — the same text also legitimately sits in
     // the row's own preview caption underneath, which is not what this is

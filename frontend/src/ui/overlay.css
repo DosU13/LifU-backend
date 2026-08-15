@@ -64,33 +64,76 @@
 }
 
 .prize-note {
-  font-size: 12.5px;
-  color: var(--faint);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: min(380px, 84vw);
 }
 
-/* What a generated Pouch/Sack actually held — a quote/fact reads big and
-   central, since the passage itself is the reward, not a caption under one. */
+/* Any prize text worth reading, not glancing at — a generated quote/fact or
+   a hand-written reward. Same pull-quote language throughout: an oversized
+   quotation mark as a quiet flourish, then the passage itself, calm and
+   large, in the serif the rest of the app reserves for coin totals. */
 .prize-passage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  max-width: min(480px, 84vw);
+  gap: 4px;
+  max-width: min(560px, 88vw);
   text-align: center;
 }
 
+.prize-quote-mark {
+  font-family: var(--serif);
+  font-size: 72px;
+  line-height: 0.4;
+  color: var(--gold);
+  opacity: 0.5;
+  text-shadow: 0 0 28px rgba(245, 193, 74, 0.4);
+}
+
 .prize-quote {
-  margin: 0;
+  margin: 2px 0 0;
   font-family: var(--serif);
   font-style: italic;
-  font-size: 25px;
-  line-height: 1.5;
+  font-size: clamp(24px, 3.6vw, 36px);
+  line-height: 1.42;
+  color: #f5efff;
+  text-wrap: balance;
+  text-shadow: 0 0 40px rgba(150, 90, 240, 0.18);
+}
+
+/* The title an art/music discovery is named by — plainer than the quote
+   voice above (this is a label, not prose), but still a size that reads as
+   the point rather than a footnote. */
+.prize-caption {
+  font-family: var(--serif);
+  font-size: 19px;
   color: #f5efff;
 }
 
 .prize-attrib {
-  font-size: 13px;
+  position: relative;
+  margin-top: 14px;
+  padding-top: 12px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--muted);
+}
+
+/* A short gold rule stands in for the quote marks/em dash a citation would
+   normally use — quieter, and it echoes the same hairline the gilded tier
+   draws under a prize's title. */
+.prize-attrib::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 34px;
+  height: 1px;
+  margin-left: -17px;
+  background: linear-gradient(90deg, transparent, var(--gold-deep), transparent);
 }
 
 .prize-art {
@@ -99,10 +142,12 @@
   width: auto;
   height: auto;
   border-radius: 12px;
+  margin-bottom: 12px;
   box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.85);
 }
 
 .prize-link {
+  margin-top: 14px;
   color: #4da6ff;
   font-size: 13px;
   text-decoration: underline;
