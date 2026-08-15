@@ -84,6 +84,27 @@ export function Vault() {
     [stocks],
   )
 
+  /** Replays an already-opened receptacle through the same reveal it got the
+   * first time — tier VFX and all — rather than the plain static detail card.
+   * A double click fires the row's own onClick first (that is how double
+   * clicks work), which would otherwise leave the static detail modal open
+   * underneath the reveal — closing it here keeps only one overlay on screen. */
+  function replayOpen(receptacle: Receptacle) {
+    setInspected(null)
+    reveal.show([
+      {
+        image: receptacleIcon(receptacle.virtue, receptacle.rarity),
+        title: `${label(receptacle.rarity)} of ${label(receptacle.virtue)}`,
+        tier: revealTier(receptacle.rarity),
+        ...(receptacle.content
+          ? { content: receptacle.content }
+          : receptacle.reward_text
+            ? { note: receptacle.reward_text }
+            : {}),
+      },
+    ])
+  }
+
   function refreshOpened() {
     void api
       .listReceptacles('OPENED')
@@ -159,10 +180,9 @@ export function Vault() {
               image: receptacleIcon(opened.virtue, opened.rarity),
               title: `${label(opened.rarity)} of ${label(opened.virtue)}`,
               tier: revealTier(opened.rarity),
-              note:
-                opened.reward_text ??
-                opened.content?.text ??
-                `+${result.coins_gained} coins`,
+              ...(opened.content
+                ? { content: opened.content }
+                : { note: opened.reward_text ?? `+${result.coins_gained} coins` }),
             },
           ])
           refreshOpened()
@@ -315,7 +335,9 @@ export function Vault() {
                   type="button"
                   key={receptacle.id}
                   className="opened-row"
+                  title="Double-click to replay how it opened"
                   onClick={() => setInspected({ type: 'receptacle', receptacle })}
+                  onDoubleClick={() => replayOpen(receptacle)}
                 >
                   <img
                     src={receptacleIcon(receptacle.virtue, receptacle.rarity)}

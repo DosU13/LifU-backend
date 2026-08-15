@@ -68,6 +68,51 @@
   color: var(--faint);
 }
 
+/* What a generated Pouch/Sack actually held — a quote/fact reads big and
+   central, since the passage itself is the reward, not a caption under one. */
+.prize-passage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: min(480px, 84vw);
+  text-align: center;
+}
+
+.prize-quote {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 25px;
+  line-height: 1.5;
+  color: #f5efff;
+}
+
+.prize-attrib {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.prize-art {
+  max-width: min(360px, 78vw);
+  max-height: 42vh;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.85);
+}
+
+.prize-link {
+  color: #4da6ff;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prize-link:hover {
+  color: #7ec1ff;
+}
+
 /* Slow rotating shafts of light behind the prize. Purely decoration, so it is
    hidden from assistive tech and stilled under reduced-motion. */
 .rays {

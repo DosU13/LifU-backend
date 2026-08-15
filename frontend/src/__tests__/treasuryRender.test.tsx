@@ -1,10 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Treasury } from '../layouts/Treasury'
 import { useGameStore } from '../state/store'
-import type { Treasure } from '../types'
+import type { BuyResult, Receptacle, Treasure } from '../types'
 
 function treasure(overrides: Partial<Treasure> = {}): Treasure {
   return {
@@ -17,6 +17,38 @@ function treasure(overrides: Partial<Treasure> = {}): Treasure {
       { virtue: 'SERENITY', rarity: 'SAFE', is_secret: false, friend_name: null },
       { virtue: 'FREEDOM', rarity: 'SANCTUM', is_secret: false, friend_name: null },
     ],
+    ...overrides,
+  }
+}
+
+function drop(overrides: Partial<Receptacle> = {}): Receptacle {
+  return {
+    id: 'r2',
+    state: 'DROPPED',
+    virtue: 'SERENITY',
+    rarity: 'SAFE',
+    is_generated: false,
+    is_secret: false,
+    friend_name: null,
+    created_at: '2026-01-01T00:00:00Z',
+    opened_at: null,
+    key_needed: { element: 'OCEAN', rarity: 'ESSENCE' },
+    value: null,
+    reward_text: null,
+    content: null,
+    ...overrides,
+  }
+}
+
+function buyResult(overrides: Partial<BuyResult> = {}): BuyResult {
+  return {
+    drop: drop(),
+    dropped_rarity: 'SAFE',
+    was_pity: false,
+    price_paid: 240,
+    coins: 760,
+    pity: { VAULT: 0, SANCTUM: 6 },
+    treasure_gone: false,
     ...overrides,
   }
 }
@@ -154,5 +186,68 @@ describe('buying', () => {
     render(<Treasury />)
 
     expect(screen.getByRole('button', { name: /let it go/i })).toBeInTheDocument()
+  })
+})
+
+describe('the buy sequence', () => {
+  it('skip fast-forwards the countdown but still shows what was won', async () => {
+    // Regression guard: skip used to clear the sequence without ever calling
+    // finish(), so pressing it lost the result popup entirely — buying a
+    // treasure and skipping the countdown told you nothing you got.
+    const buy = vi.fn().mockResolvedValue(buyResult())
+    useGameStore.setState({
+      treasures: [treasure()],
+      coins: 1000,
+      selectedTreasureId: 't1',
+      buyTreasure: buy,
+    })
+    render(<Treasury />)
+
+    fireEvent.click(screen.getByRole('button', { name: /buy — 240/i }))
+    // Lets the mocked buyTreasure promise resolve and the elimination
+    // sequence start, without advancing past its first real timer.
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(screen.getByText(/rolling…/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^skip$/i }))
+
+    expect(screen.queryByText(/rolling…/i)).not.toBeInTheDocument()
+    const frame = document.querySelector('.prize-frame')
+    expect(frame).toBeInTheDocument()
+    // Scoped to the reveal — "Safe of Serenity" also still legitimately
+    // labels the (now inert) floater left over underneath it.
+    expect(within(frame as HTMLElement).getByText('Safe of Serenity')).toBeInTheDocument()
+  })
+
+  it('shows the reveal even when the drop cannot be matched back onto the screen', async () => {
+    // planElimination returns null when the drop cannot be found among the
+    // treasure's current contents (they moved under us) — buy() must still
+    // show the reveal immediately rather than silently doing nothing.
+    const buy = vi.fn().mockResolvedValue(
+      buyResult({
+        drop: drop({ virtue: 'DETERMINATION', rarity: 'CHEST' }),
+        dropped_rarity: 'CHEST',
+      }),
+    )
+    useGameStore.setState({
+      treasures: [treasure()],
+      coins: 1000,
+      selectedTreasureId: 't1',
+      buyTreasure: buy,
+    })
+    render(<Treasury />)
+
+    fireEvent.click(screen.getByRole('button', { name: /buy — 240/i }))
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText('Chest of Determination')).toBeInTheDocument()
+    expect(document.querySelector('.prize-frame')).toBeInTheDocument()
+    expect(screen.queryByText(/rolling…/i)).not.toBeInTheDocument()
   })
 })

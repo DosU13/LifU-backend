@@ -2,10 +2,11 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { api } from '../api'
 import { Vault } from '../layouts/Vault'
 import { useGameStore } from '../state/store'
 import { stockKey } from '../types'
-import type { Receptacle } from '../types'
+import type { GeneratedContent, Receptacle } from '../types'
 
 function receptacle(overrides: Partial<Receptacle> = {}): Receptacle {
   return {
@@ -238,5 +239,71 @@ describe('inspecting an item', () => {
     const dialog = screen.getByRole('dialog')
     expect(within(dialog).getByText(/stays hidden until it opens/i)).toBeInTheDocument()
     expect(within(dialog).getByText(/ready — one ocean essence/i)).toBeInTheDocument()
+  })
+})
+
+describe('opened receptacles', () => {
+  function generated(overrides: Partial<GeneratedContent> = {}): GeneratedContent {
+    return {
+      kind: 'QUOTE',
+      title: 'A thought',
+      url: '',
+      author: 'Marcus Aurelius',
+      text: 'The obstacle is the way.',
+      ...overrides,
+    }
+  }
+
+  function opened(overrides: Partial<Receptacle> = {}): Receptacle {
+    return receptacle({
+      id: 'o1',
+      state: 'OPENED',
+      opened_at: '2026-01-02T00:00:00Z',
+      value: 40,
+      content: generated(),
+      ...overrides,
+    })
+  }
+
+  it('a single click still shows the plain static card, not the flashy veil', async () => {
+    vi.spyOn(api, 'listReceptacles').mockResolvedValue({ receptacles: [opened()] })
+    render(<Vault />)
+
+    await userEvent.click(await screen.findByRole('button', { name: /safe of serenity/i }))
+
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText(/the obstacle is the way/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/opened · was worth 40/i)).toBeInTheDocument()
+    expect(document.querySelector('.detail-card')).toBeInTheDocument()
+    expect(document.querySelector('.prize-frame')).not.toBeInTheDocument()
+  })
+
+  it('a double click replays the full tiered reveal instead', async () => {
+    vi.spyOn(api, 'listReceptacles').mockResolvedValue({ receptacles: [opened()] })
+    render(<Vault />)
+
+    await userEvent.dblClick(await screen.findByRole('button', { name: /safe of serenity/i }))
+
+    expect(document.querySelector('.prize-frame')).toBeInTheDocument()
+    expect(document.querySelector('.veil.tier-gilded')).toBeInTheDocument()
+    // Same rich-content path a fresh open uses — the quote itself, not a caption.
+    expect(screen.getByText('“The obstacle is the way.”')).toBeInTheDocument()
+    expect(screen.getByText('— Marcus Aurelius')).toBeInTheDocument()
+  })
+
+  it('falls back to the hand-written reward text when there is no generated content', async () => {
+    vi.spyOn(api, 'listReceptacles').mockResolvedValue({
+      receptacles: [opened({ content: null, reward_text: 'Movie night, your pick.' })],
+    })
+    render(<Vault />)
+
+    await userEvent.dblClick(await screen.findByRole('button', { name: /safe of serenity/i }))
+
+    // Scoped to the reveal itself — the same text also legitimately sits in
+    // the row's own preview caption underneath, which is not what this is
+    // testing for.
+    const veil = document.querySelector('.veil')
+    expect(veil).not.toBeNull()
+    expect(within(veil as HTMLElement).getByText('Movie night, your pick.')).toBeInTheDocument()
   })
 })

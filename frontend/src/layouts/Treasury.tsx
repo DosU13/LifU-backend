@@ -52,6 +52,10 @@ export function Treasury() {
   const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const reveal = useReveal()
   const timers = useRef<number[]>([])
+  // What "Skip" fast-forwards to: the elimination countdown is the only thing
+  // a skip should cut short. The prize it was building up to must still show
+  // — otherwise a skip mid-buy silently eats the answer to "what did I get".
+  const pendingFinish = useRef<(() => void) | null>(null)
 
   // A sequence left running after unmount would set state on a dead component.
   useEffect(
@@ -91,6 +95,7 @@ export function Treasury() {
       rarity: result.dropped_rarity,
     })
     const finish = () => {
+      pendingFinish.current = null
       setSequence(null)
       reveal.show([
         {
@@ -109,6 +114,11 @@ export function Treasury() {
       return
     }
 
+    // Reachable even mid-countdown: skip() clears the timers below, which
+    // permanently strands this function on its next `await wait(...)` — so
+    // finish() must also be callable from the outside, not just at the end
+    // of this straight-line run.
+    pendingFinish.current = finish
     setSequence({ contents: snapshot, winner: plan.winner, out: [], crowned: false })
 
     await wait(SHIVER_MS)
@@ -127,7 +137,9 @@ export function Treasury() {
   function skip() {
     timers.current.forEach(clearTimeout)
     timers.current = []
-    setSequence(null)
+    // Skips the countdown, not the payoff — the prize still has to show,
+    // otherwise buying a treasure and hitting skip would tell you nothing.
+    pendingFinish.current?.()
   }
 
   async function confirmDiscard() {

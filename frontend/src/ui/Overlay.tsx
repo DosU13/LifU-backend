@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import type { RevealTier } from '../domain'
+import type { GeneratedContent } from '../types'
 
 import './overlay.css'
 
@@ -64,6 +65,64 @@ export interface Prize {
    * explicit `undefined` for a plainly optional property.
    */
   tier?: RevealTier | undefined
+  /**
+   * A generated Pouch/Sack's actual reward — a quote, a fact, a piece of art,
+   * a track. When present this replaces `note` with a richer, kind-specific
+   * display (the plain note line is for everything else: coin totals, "now
+   * find its key", a hand-written reward).
+   */
+  content?: GeneratedContent | undefined
+}
+
+/** The quote/fact/art/music a generated Pouch or Sack actually held. */
+function PrizeContent({ content }: { content: GeneratedContent }) {
+  if (content.kind === 'QUOTE' || content.kind === 'FACT') {
+    return (
+      <div className="prize-passage">
+        <p className="prize-quote">&ldquo;{content.text}&rdquo;</p>
+        {content.author && <div className="prize-attrib">— {content.author}</div>}
+        {content.kind === 'FACT' && content.url && (
+          <a className="prize-link" href={content.url} target="_blank" rel="noreferrer">
+            Source ↗
+          </a>
+        )}
+      </div>
+    )
+  }
+
+  if (content.kind === 'ART') {
+    return (
+      <div className="prize-passage">
+        {content.url && <img className="prize-art" src={content.url} alt={content.title} />}
+        <div className="prize-attrib">
+          {content.title}
+          {content.author && ` — ${content.author}`}
+        </div>
+        {content.text && (
+          <a className="prize-link" href={content.text} target="_blank" rel="noreferrer">
+            View source ↗
+          </a>
+        )}
+      </div>
+    )
+  }
+
+  // MUSIC — no audio is embedded here (an arbitrary stream URL is not safe to
+  // autoplay or trust cross-origin), just the track named plainly and a link
+  // out to actually hear it.
+  return (
+    <div className="prize-passage">
+      <div className="prize-attrib">
+        {content.title}
+        {content.author && ` — ${content.author}`}
+      </div>
+      {content.url && (
+        <a className="prize-link" href={content.url} target="_blank" rel="noreferrer">
+          ▶ Listen ↗
+        </a>
+      )}
+    </div>
+  )
 }
 
 /** More of them the rarer it is; the CSS staggers each one off its index. */
@@ -135,7 +194,11 @@ export function Reveal({ queue, index, onAdvance, onSkip }: RevealProps) {
           {tier && particles('motes', MOTE_COUNT[tier])}
           {prize.amount && <div className="prize-amount">{prize.amount}</div>}
           <div className="prize-title">{prize.title}</div>
-          {prize.note && <div className="prize-note">{prize.note}</div>}
+          {prize.content ? (
+            <PrizeContent content={prize.content} />
+          ) : (
+            prize.note && <div className="prize-note">{prize.note}</div>
+          )}
         </div>
       </div>
 
